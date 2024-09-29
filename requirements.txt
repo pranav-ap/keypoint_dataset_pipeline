@@ -1,0 +1,13 @@
+jupyter
+numpy
+pandas
+matplotlib
+pillow
+seaborn
+nnspt
+tensorboard
+lightning
+scikit-learn
+scikit-image
+opencv-python
+loguru
