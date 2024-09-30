@@ -10,12 +10,6 @@ import seaborn as sns
 sns.set_theme(style="darkgrid")
 
 
-def read_image_and_size(image_path):
-    image = Image.open(image_path)
-    W, H = image.size
-    return image, W, H
-
-
 def pillow_to_cv2(pil_image):
     # Convert Pillow image to NumPy array (RGB format)
     numpy_image = np.array(pil_image)
@@ -27,8 +21,8 @@ def pillow_to_cv2(pil_image):
 
 def plot_single(a):
     fig, ax = plt.subplots(1, 1, figsize=(20, 10))
-    ax[0].imshow(a)
-    ax[0].grid(False)  # turn off grid
+    ax.imshow(a)
+    ax.grid(False)  # turn off grid
     plt.show()
 
 
