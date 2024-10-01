@@ -10,6 +10,12 @@ import seaborn as sns
 sns.set_theme(style="darkgrid")
 
 
+def read_image_and_size(image_path):
+    image: Image.Image = Image.open(image_path)
+    W, H = image.size
+    return image, W, H
+
+
 def pillow_to_cv2(pil_image):
     # Convert Pillow image to NumPy array (RGB format)
     numpy_image = np.array(pil_image)
@@ -48,11 +54,11 @@ def draw_keypoints(image, keypoints):
     return ret
 
 
-def draw_matches(image_A, keypoints_A, image_B, keypoints_B):
+def draw_matches(image_A, keypoints_A, image_B, keypoints_B, count=10):
     keypoints_A = [cv2.KeyPoint(x, y, 1.) for x, y in keypoints_A.cpu().numpy()]
     keypoints_B = [cv2.KeyPoint(x, y, 1.) for x, y in keypoints_B.cpu().numpy()]
 
-    count = min(10, len(keypoints_A))
+    count = min(count, len(keypoints_A))
     matches_A_to_B = [cv2.DMatch(idx, idx, 0.) for idx in range(count)]
 
     image_A, image_B = np.array(image_A), np.array(image_B)

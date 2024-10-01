@@ -1,10 +1,7 @@
 from dataclasses import dataclass
 import os
-import numpy as np
-import torch
-import torchvision.transforms as T
-from PIL import Image
 from pathlib import Path
+from utils import *
 
 
 @dataclass
@@ -17,13 +14,16 @@ config = InferenceConfig()
 
 
 class ImageData:
-    def __init__(self, image_path, keypoints, descriptions):
+    def __init__(self, image_path, resize=None):
         self.image_path: str = image_path
         self.image_name: str = Path(self.image_path).stem
 
-        image, W, H = self._read_image_and_size(image_path)
+        self.image: Image.Image = Image.open(image_path)
 
-        self.image: Image.Image = image
+        if resize:
+            self.image = self.image.resize(resize)
+
+        W, H = self.image.size
         self.W: int = W
         self.H: int = H
 
@@ -35,17 +35,12 @@ class ImageData:
         matches_A : torch.Size([2626, 2])
         """
 
-        self.keypoints = keypoints
-        self.descriptions = descriptions
+        self.keypoints = None
+        self.confidences = None
+        self.descriptions = None
 
         self.left_matches = None
         self.right_matches = None
-
-    @staticmethod
-    def _read_image_and_size(image_path):
-        image: Image.Image = Image.open(image_path)
-        W, H = image.size
-        return image, W, H
 
     def load_keypoints(self):
         keypoints_filepath = os.path.join(config.image_data_path, f"{self.image_name}_keypoints.npy")
@@ -81,23 +76,7 @@ class ImageData:
         np.save(os.path.join(config.image_data_path, f"{self.image_name}_right_matches.npy"), right_matches_np)
 
 
-def get_best_device(verbose=False):
-    device = torch.device('cpu')
-
-    if torch.cuda.is_available():
-        device = torch.device('cuda')
-    elif torch.backends.mps.is_available():
-        device = torch.device('mps')
-    else:
-        device = torch.device('cpu')
-
-    if verbose:
-        print(f"Fastest device found is: {device}")
-
-    return device
-
-
-class DatasetPipeline:
+class KeypointDatasetPipeline:
     def __init__(self):
         from DeDoDe import dedode_detector_L, dedode_descriptor_G
         from DeDoDe.matchers.dual_softmax_matcher import DualSoftMaxMatcher
@@ -106,86 +85,52 @@ class DatasetPipeline:
         self.descriptor = dedode_descriptor_G(weights=None, dinov2_weights=None)
         self.matcher = DualSoftMaxMatcher()
 
+        self.normalizer = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        self.device = get_best_device()
+
         self.deblurer = None
-
-    """
-    UTILS
-    """
-
-    @staticmethod
-    def _get_image_paths():
-        # im_A_path = "assets/im_A.jpg"
-        # im_B_path = "assets/im_B.jpg"
-        im_A_path = "assets/1403715284512143104.jpg"
-        im_B_path = "assets/1403715285812143104.jpg"
-
-        return [im_A_path, im_B_path]
 
     """
     Detect, Describe, Match
     """
 
-    def detect(self, image_path, H=784, W=784, device=get_best_device()):
-        pil_im = Image.open(image_path).resize((W, H))
+    def preprocess_image(self, image_data: ImageData):
+        # Convert grayscale to RGB if necessary
+        if image_data.image.mode != 'RGB':
+            image_data.image = image_data.image.convert('RGB')
 
-        # Convert grayscale images to RGB
-        if pil_im.mode != 'RGB':
-            pil_im = pil_im.convert('RGB')
+        standard_im = np.array(image_data.image) / 255.0
 
-        standard_im = np.array(pil_im) / 255.0
+        # Convert grayscale to 3-channel if needed
+        if standard_im.ndim == 2:
+            standard_im = np.stack([standard_im] * 3, axis=0)  # (3, H, W)
+        else:
+            standard_im = np.transpose(standard_im, (2, 0, 1))  # (3, H, W)
 
-        normalizer = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        standard_im = self.normalizer(torch.from_numpy(standard_im)).float()
 
-        # Check if the image is grayscale (2D array)
-        if standard_im.ndim == 2:  # Grayscale
-            # Add a channel dimension
-            standard_im = standard_im[None, :, :]  # Shape becomes (1, H, W)
-        else:  # RGB
-            # Permute dimensions for RGB images
-            standard_im = np.transpose(standard_im, (2, 0, 1))  # Shape becomes (3, H, W)
+        return standard_im
 
-        # Apply normalization
-        standard_im = normalizer(torch.from_numpy(standard_im)).float().to(device)[None]  # Add batch dimension
-
+    def detect(self, image_data: ImageData, standard_im):
         batch = {"image": standard_im}
         detections = self.detector.detect(batch, num_keypoints=10_000)
-        keypoints, confidences = detections["keypoints"], detections["confidence"]
 
-        return keypoints, confidences
+        image_data.keypoints = detections["keypoints"]
+        image_data.confidences = detections["confidence"]
 
-    def describe(self, image_path, keypoints, H=784, W=784, device=get_best_device()):
-        pil_im = Image.open(image_path).resize((W, H))
-
-        # Convert grayscale images to RGB
-        if pil_im.mode != 'RGB':
-            pil_im = pil_im.convert('RGB')
-
-        standard_im = np.array(pil_im) / 255.0
-
-        normalizer = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-
-        # Check if the image is grayscale (2D array)
-        if standard_im.ndim == 2:  # Grayscale
-            # Add a channel dimension
-            standard_im = standard_im[None, :, :]  # Shape becomes (1, H, W)
-        else:  # RGB
-            # Permute dimensions for RGB images
-            standard_im = np.transpose(standard_im, (2, 0, 1))  # Shape becomes (3, H, W)
-
-        # Apply normalization
-        standard_im = normalizer(torch.from_numpy(standard_im)).float().to(device)[None]  # Add batch dimension
-
+    def describe(self, image_data: ImageData, standard_im):
         batch = {"image": standard_im}
-        descriptions = self.descriptor.describe_keypoints(batch, keypoints)
-        descriptions = descriptions["descriptions"]
+        descriptions = self.descriptor.describe_keypoints(batch, image_data.keypoints)
 
-        return descriptions
+        image_data.descriptions = descriptions["descriptions"]
 
     def detect_describe(self, image_path) -> ImageData:
-        keypoints, confidences = self.detect(image_path)
-        descriptions = self.describe(image_path, keypoints)
+        image_data = ImageData(image_path, resize=(784, 784))
+        standard_im = self.preprocess_image(image_path).to(self.device)[None]  # Add batch dimension
 
-        image_data = ImageData(image_path, keypoints, descriptions)
+        self.detect(image_data, standard_im)
+        self.describe(image_data, standard_im)
+
         return image_data
 
     def match(self, a: ImageData, b: ImageData):
@@ -199,15 +144,13 @@ class DatasetPipeline:
 
         a.left_matches, b.right_matches = self.matcher.to_pixel_coords(matches_A, matches_B, a.H, a.W, b.H, b.W)
 
-    def detect_describe_match(self):
-        image_path_list = self._get_image_paths()
-
+    def detect_describe_match(self, folder_path, image_names):
         a: ImageData | None = None
         b: ImageData | None = None
 
-        for index in range(len(image_path_list) - 1):
-            path_a = image_path_list[index]
-            path_b = image_path_list[index + 1]
+        for index in range(len(image_names) - 1):
+            path_a = f"{folder_path}/{image_names[index]}"
+            path_b = f"{folder_path}/{image_names[index + 1]}"
 
             # Detect & Describe
 
@@ -228,38 +171,63 @@ class DatasetPipeline:
         b.save_left_matches()
 
     """
+    Prepare Image Names
+    """
+
+    @staticmethod
+    def _get_folder_and_image_names():
+        # EUROC V1_01_easy
+        folder_path = "D:/thesis_code/data/V1_01_easy/mav0/cam0/data"
+        csv_path = "D:/thesis_code/data/V1_01_easy/mav0/cam0/data.csv"
+
+        import pandas as pd
+        df = pd.read_csv(csv_path)
+        df['timestamp'] = pd.to_datetime(df['timestamp [ns]'], unit='ns')
+        df = df.sort_values(by='timestamp')
+
+        image_names = df['filename'].tolist()
+
+        return folder_path, image_names
+
+    """
     RUN
     """
 
     def run(self):
-        pass
+        folder_path, image_names = self._get_folder_and_image_names()
+        self.detect_describe_match(folder_path, image_names)
 
     """
-    Checkouts
+    Checkout
     """
-
-    def checkout_debluring(self):
-        pass
 
     def checkout_matching(self, path_a, path_b):
-        a = self.detect_describe(path_a)
-        b = self.detect_describe(path_b)
+        a: ImageData = self.detect_describe(path_a)
+        b: ImageData = self.detect_describe(path_b)
 
         self.match(a, b)
 
-        from utils.visualize import draw_matches
+        from utils import draw_matches
         match_image = draw_matches(
             a.image, a.left_matches,
-            b.image, b.right_matches
+            b.image, b.right_matches,
+            count=15
         )
 
-        from utils.visualize import plot_single
+        from utils import plot_single
         plot_single(match_image)
 
 
 def main():
-    pipeline = DatasetPipeline()
-    pipeline.detect_describe_match()
+    pipeline = KeypointDatasetPipeline()
+
+    # im_A_path = "assets/im_A.jpg"
+    # im_B_path = "assets/im_B.jpg"
+
+    im_A_path = "assets/1403715284512143104.jpg"
+    im_B_path = "assets/1403715285812143104.jpg"
+
+    pipeline.checkout_matching(im_A_path, im_B_path)
 
 
 if __name__ == '__main__':
