@@ -54,26 +54,6 @@ def draw_keypoints(image, keypoints):
     return ret
 
 
-def draw_matches(image_A, keypoints_A, image_B, keypoints_B, count=10):
-    keypoints_A = [cv2.KeyPoint(x, y, 1.) for x, y in keypoints_A.cpu().numpy()]
-    keypoints_B = [cv2.KeyPoint(x, y, 1.) for x, y in keypoints_B.cpu().numpy()]
-
-    count = min(count, len(keypoints_A))
-    matches_A_to_B = [cv2.DMatch(idx, idx, 0.) for idx in range(count)]
-
-    image_A, image_B = np.array(image_A), np.array(image_B)
-
-    match_image = cv2.drawMatches(
-        image_A, keypoints_A,
-        image_B, keypoints_B,
-        matches_A_to_B,
-        outImg=None,
-        matchesThickness=3,
-    )
-
-    return match_image
-
-
 def tensor_to_pil_image(tensor):
     tensor = tensor.clone().detach()  # Detach and clone to create a safe copy
 

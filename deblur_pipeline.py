@@ -1,4 +1,3 @@
-from utils import *
 from dataclasses import dataclass
 import os
 import torch
@@ -47,8 +46,6 @@ class DeblurDatasetPipeline:
         self.model.load_state_dict(checkpoint['params'])
         self.model.eval()
 
-        self.img_multiple_of = 8
-
     @staticmethod
     def get_weights_and_parameters(task, parameters):
         weights = None
@@ -68,6 +65,8 @@ class DeblurDatasetPipeline:
     """
 
     def deblur(self, filepath):
+        img_multiple_of = 8
+
         with (torch.no_grad()):
             torch.cuda.ipc_collect()
             torch.cuda.empty_cache()
@@ -75,15 +74,15 @@ class DeblurDatasetPipeline:
             img = cv2.cvtColor(cv2.imread(filepath), cv2.COLOR_BGR2RGB)
             input_ = torch.from_numpy(img).float().div(255.0).permute(2, 0, 1).unsqueeze(0).cuda()
 
-            # Pad the input if not_multiple_of 8
+            # Pad the input if not multiple of 8
             h = input_.shape[2]
             w = input_.shape[3]
 
-            H = ((h + self.img_multiple_of) // self.img_multiple_of) * self.img_multiple_of
-            W = ((w + self.img_multiple_of) // self.img_multiple_of) * self.img_multiple_of
+            H = ((h + img_multiple_of) // img_multiple_of) * img_multiple_of
+            W = ((w + img_multiple_of) // img_multiple_of) * img_multiple_of
 
-            padh = H - h if h % self.img_multiple_of != 0 else 0
-            padw = W - w if w % self.img_multiple_of != 0 else 0
+            padh = H - h if h % img_multiple_of != 0 else 0
+            padw = W - w if w % img_multiple_of != 0 else 0
             input_ = F.pad(input_, (0, padw, 0, padh), 'reflect')
 
             restored = self.model(input_)

@@ -11,3 +11,14 @@ scikit-learn
 scikit-image
 opencv-python
 loguru
+torch
+torchvision
+h5py
+tqdm
+einops
+setuptools
+PyYAML
+requests
+scipy
+natsort
+joblib
