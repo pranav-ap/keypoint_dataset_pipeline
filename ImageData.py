@@ -1,4 +1,3 @@
-from utils.logger import logger
 from config import config
 import os
 import numpy as np
@@ -78,4 +77,3 @@ class ImagePairData:
         matches = np.hstack([self.left_matches, self.right_matches])
 
         np.save(matches_filepath, matches)
-
