@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 class ImageSoloData:
-    def __init__(self, image_path, resize=None, file_postfix=None):
+    def __init__(self, image_path, resize=None):
         self.image_path: str = image_path
         self.image_name: str = Path(self.image_path).stem
 
@@ -19,8 +19,6 @@ class ImageSoloData:
         self.W: int = W
         self.H: int = H
 
-        self.file_postfix = file_postfix
-
         self.keypoints = None
         self.confidences = None
         self.descriptions = None
@@ -30,11 +28,11 @@ class ImageSoloData:
     """
 
     def load_keypoints(self):
-        keypoints_filepath = os.path.join(config.npy_dir_path, f"{self.image_name}_keypoints_{self.file_postfix}.npy")
+        keypoints_filepath = os.path.join(config.npy_dir_path, f"{self.image_name}_keypoints_{config.POSTFIX_FILE}.npy")
         assert os.path.exists(keypoints_filepath)
         self.keypoints = np.load(keypoints_filepath)
 
-        descriptions_filepath = os.path.join(config.npy_dir_path, f"{self.image_name}_descriptions_{self.file_postfix}.npy")
+        descriptions_filepath = os.path.join(config.npy_dir_path, f"{self.image_name}_descriptions_{config.POSTFIX_FILE}.npy")
         assert os.path.exists(descriptions_filepath)
         self.descriptions = np.load(descriptions_filepath)
 
@@ -44,17 +42,16 @@ class ImageSoloData:
         keypoints_np = self.keypoints.cpu().numpy()
         descriptions_np = self.descriptions.cpu().numpy()
 
-        np.save(os.path.join(config.npy_dir_path, f"{self.image_name}_keypoints_{self.file_postfix}.npy"), keypoints_np)
-        np.save(os.path.join(config.npy_dir_path, f"{self.image_name}_descriptions_{self.file_postfix}.npy"), descriptions_np)
+        np.save(os.path.join(config.npy_dir_path, f"{self.image_name}_keypoints_{config.POSTFIX_FILE}.npy"), keypoints_np)
+        np.save(os.path.join(config.npy_dir_path, f"{self.image_name}_descriptions_{config.POSTFIX_FILE}.npy"), descriptions_np)
 
 
 class ImagePairData:
-    def __init__(self, a: ImageSoloData, b: ImageSoloData, file_postfix: str):
+    def __init__(self, a: ImageSoloData, b: ImageSoloData):
         self.a = a
         self.b = b
 
-        self.file_postfix = file_postfix
-        self.filename = f'{a.image_name}_{b.image_name}_matches_{self.file_postfix}.npy'
+        self.filename = f'{a.image_name}_{b.image_name}_matches_{config.POSTFIX_FILE}.npy'
 
         self.left_matches = None
         self.right_matches = None

@@ -1,31 +1,74 @@
 from utils.logger import logger
+from utils import combine_images, random_color_generator
 from config import config
-from utils import get_best_device
 from ImageData import ImageSoloData, ImagePairData
-import os
 import cv2
 import numpy as np
-import pandas as pd
 from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt
-import torch
-import torchvision.transforms as T
 from typing import Optional
 from abc import ABC, abstractmethod
 
 
 class KeypointMatcher(ABC):
-    def __init__(self, file_postfix):
-        self.device = get_best_device()
-        self.file_postfix = file_postfix
+    def __init__(self):
+        pass
 
     @abstractmethod
-    def match(self):
+    def extract_matches(self):
         pass
 
     @abstractmethod
     def match_pair(self, pair: ImagePairData):
         pass
+
+    """
+    Visualization
+    """
+
+    def show_matches(self, path_a, path_b):
+        a = ImageSoloData(path_a, resize=config.IMAGE_RESIZE)
+        a.load_keypoints()
+
+        b = ImageSoloData(path_b, resize=config.IMAGE_RESIZE)
+        b.load_keypoints()
+
+        pair = ImagePairData(a, b)
+        pair.load_matches()
+
+        self._visualize_keypoints(
+            points_in_im1=pair.left_matches,
+            points_in_im2=pair.right_matches,
+            im1=a.image,
+            im2=b.image,
+        )
+
+    @staticmethod
+    def _visualize_keypoints(points_in_im1, points_in_im2, im1: Image, im2: Image):
+        combined_images = combine_images(im1, im2)
+        draw = ImageDraw.Draw(combined_images)
+
+        circle_radius = 10
+
+        for pt1, pt2 in zip(points_in_im1, points_in_im2):
+            y_im1, x_im1 = pt1
+            y_im2, x_im2 = pt2
+
+            random_color = random_color_generator()
+
+            draw.ellipse(
+                (x_im1 - circle_radius, y_im1 - circle_radius, x_im1 + circle_radius, y_im1 + circle_radius),
+                outline=random_color,
+                width=5
+            )
+
+            draw.ellipse(
+                (im1.width + x_im2 - circle_radius, y_im2 - circle_radius, im1.width + x_im2 + circle_radius, y_im2 + circle_radius),
+                outline=random_color,
+                width=5
+            )
+
+        return combined_images
 
 
 class DeDoDeMatcher(KeypointMatcher):
@@ -41,7 +84,7 @@ class DeDoDeMatcher(KeypointMatcher):
     """
 
     @staticmethod
-    def plot_image(image):
+    def _plot_image(image):
         # Convert BGR to RGB for matplotlib
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
@@ -52,7 +95,7 @@ class DeDoDeMatcher(KeypointMatcher):
         plt.show()
 
     @staticmethod
-    def draw_matches(a, left_matches, b, right_matches):
+    def _draw_matches(a, left_matches, b, right_matches):
         left_matches = [cv2.KeyPoint(x, y, 1.) for x, y in left_matches]
         right_matches = [cv2.KeyPoint(x, y, 1.) for x, y in right_matches]
 
@@ -70,27 +113,30 @@ class DeDoDeMatcher(KeypointMatcher):
 
         return match_image
 
-    def load_and_visualize(self, image_name_a, image_name_b, IMAGE_RESIZE=(784, 784)):
-        FILE_POSTFIX = f'{config.POSTFIX_DEDODE}_{config.POSTFIX_EUROC}'
+    def show_matches(self, path_a, path_b):
+        a = ImageSoloData(
+            path_a,
+            resize=config.IMAGE_RESIZE,
+        )
 
-        path_a = f"{config.images_dir_path}/{image_name_a}"
-        path_b = f"{config.images_dir_path}/{image_name_b}"
-
-        a: ImageSoloData = ImageSoloData(path_a, resize=IMAGE_RESIZE, file_postfix=FILE_POSTFIX)
         a.load_keypoints()
 
-        b: ImageSoloData = ImageSoloData(path_b, resize=IMAGE_RESIZE, file_postfix=FILE_POSTFIX)
+        b = ImageSoloData(
+            path_b,
+            resize=config.IMAGE_RESIZE,
+        )
+
         b.load_keypoints()
 
-        pair = ImagePairData(a, b, file_postfix=self.file_postfix)
+        pair = ImagePairData(a, b)
         pair.load_matches()
 
-        image = self.draw_matches(
+        image = self._draw_matches(
             a.image, pair.left_matches,
             b.image, pair.right_matches
         )
 
-        self.plot_image(image)
+        self._plot_image(image)
 
     """
     Match
@@ -113,26 +159,31 @@ class DeDoDeMatcher(KeypointMatcher):
             a.H, a.W, b.H, b.W
         )
 
-    def match(self):
+    def extract_matches(self):
         a: Optional[ImageSoloData] = None
-
-        IMAGE_RESIZE = (784, 784)
-        FILE_POSTFIX = f'{config.POSTFIX_DEDODE}_{config.POSTFIX_EUROC}'
 
         for index in range(len(self.image_names) - 1):
             path_a = f"{config.images_dir_path}/{self.image_names[index]}"
             path_b = f"{config.images_dir_path}/{self.image_names[index + 1]}"
 
             if a is None:
-                a = ImageSoloData(path_a, resize=IMAGE_RESIZE, file_postfix=FILE_POSTFIX)
+                a = ImageSoloData(
+                    path_a,
+                    resize=config.IMAGE_RESIZE
+                )
+
                 a.load_keypoints()
 
-            b = ImageSoloData(path_b, resize=IMAGE_RESIZE, file_postfix=FILE_POSTFIX)
+            b = ImageSoloData(
+                path_b,
+                resize=config.IMAGE_RESIZE
+            )
+
             b.load_keypoints()
 
-            pair = ImagePairData(a, b, file_postfix=self.file_postfix)
+            pair = ImagePairData(a, b)
 
-            self.match(pair)
+            self.extract_matches(pair)
             pair.save_matches()
 
             a = b
@@ -144,7 +195,12 @@ class RoMaMatcher(KeypointMatcher):
         self.image_names = image_names
 
         from romatch import roma_outdoor
-        self.model = roma_outdoor(device=self.device, coarse_res=560, upsample_res=(864, 1152))
+        self.model = roma_outdoor(
+            device=config.device,
+            coarse_res=560,
+            upsample_res=(864, 1152)
+        )
+
         self.model.symmetric = False
         self.H, self.W = self.model.get_output_resolution()
 
@@ -185,100 +241,44 @@ class RoMaMatcher(KeypointMatcher):
         return points
 
     """
-    Visualization
-    """
-
-    @staticmethod
-    def _combine_images(im1: Image, im2: Image):
-        combined_images = Image.new('RGB', (im1.width + im2.width, im1.height))
-        combined_images.paste(im1, (0, 0))
-        combined_images.paste(im2, (im1.width, 0))
-        return combined_images
-
-    @staticmethod
-    def _random_color_generator():
-        color = np.random.randint(0, 256, size=3)
-        return tuple(color)
-
-    def match_and_visualize_keypoints(self, points_in_im1, warp, im1: Image, im2: Image):
-        combined_images = self._combine_images(im1, im2)
-        draw = ImageDraw.Draw(combined_images)
-
-        circle_radius = 10
-
-        for pt in points_in_im1:
-            y_im1, x_im1 = pt
-
-            w = warp[y_im1, x_im1]
-            A, B = self.model.to_pixel_coordinates(w, self.H, self.W, self.H, self.W)
-            x_im2, y_im2 = B
-
-            random_color = self._random_color_generator()
-
-            draw.ellipse(
-                (x_im1 - circle_radius, y_im1 - circle_radius, x_im1 + circle_radius, y_im1 + circle_radius),
-                outline=random_color,
-                width=5
-            )
-
-            draw.ellipse(
-                (im1.width + x_im2 - circle_radius, y_im2 - circle_radius, im1.width + x_im2 + circle_radius, y_im2 + circle_radius),
-                outline=random_color,
-                width=5
-            )
-
-        return combined_images
-
-    def visualize_keypoints(self, points_in_im1, points_in_im2, im1: Image, im2: Image):
-        combined_images = self._combine_images(im1, im2)
-        draw = ImageDraw.Draw(combined_images)
-
-        circle_radius = 10
-
-        for pt1, pt2 in zip(points_in_im1, points_in_im2):
-            y_im1, x_im1 = pt1
-            y_im2, x_im2 = pt2
-
-            random_color = self._random_color_generator()
-
-            draw.ellipse(
-                (x_im1 - circle_radius, y_im1 - circle_radius, x_im1 + circle_radius, y_im1 + circle_radius),
-                outline=random_color,
-                width=5
-            )
-
-            draw.ellipse(
-                (im1.width + x_im2 - circle_radius, y_im2 - circle_radius, im1.width + x_im2 + circle_radius, y_im2 + circle_radius),
-                outline=random_color,
-                width=5
-            )
-
-        return combined_images
-
-    """
     Match
     """
 
-    def match_pair(self, im_A_path, im_B_path):
-        warp, certainty = self.model.match(im_A_path, im_B_path, device=self.device)
+    def match_pair(self, pair: ImagePairData):
+        warp, certainty = self.model.match(
+            pair.a.image_path,
+            pair.b.image_path,
+            device=config.device
+        )
+
         return warp, certainty
 
-    def match(self):
-        b: Optional[ImageSoloData] = None
+    def extract_matches(self):
+        a: Optional[ImageSoloData] = None
 
         for index in range(len(self.image_names) - 1):
             path_a = f"{config.images_dir_path}/{self.image_names[index]}"
             path_b = f"{config.images_dir_path}/{self.image_names[index + 1]}"
 
-            warp, certainty = self.match_pair(path_a, path_b)
+            if a is None:
+                a = ImageSoloData(
+                    path_a,
+                    resize=config.IMAGE_RESIZE
+                )
 
-            a: ImageSoloData = b if b is not None else ImageSoloData(path_a)
-            b: ImageSoloData = ImageSoloData(path_b)
-
-            if a.keypoints is None:
                 a.load_keypoints()
 
-            b.load_keypoints()
+            b = ImageSoloData(
+                path_b,
+                resize=config.IMAGE_RESIZE
+            )
+
+            pair = ImagePairData(a, b)
+            warp, certainty = self.match_pair(pair)
 
             points_in_im1 = a.keypoints
             points_in_im2 = self.get_corresponding_points(points_in_im1, warp)
+            b.keypoints = points_in_im2
+            b.save_keypoints()
+
+            a = b

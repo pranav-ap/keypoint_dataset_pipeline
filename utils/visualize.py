@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 from PIL import Image
-import torch
 import torchvision.transforms as T
 
 import matplotlib.pyplot as plt
@@ -28,7 +27,7 @@ def pillow_to_cv2(pil_image):
 def plot_single(a):
     fig, ax = plt.subplots(1, 1, figsize=(20, 10))
     ax.imshow(a)
-    ax.grid(False)  # turn off grid
+    ax.grid(False)
     plt.show()
 
 
@@ -74,3 +73,15 @@ def tensor_to_pil_image(tensor):
 
     # Convert to PIL image
     return T.ToPILImage()(tensor)
+
+
+def combine_images(im1: Image, im2: Image):
+    combined_images = Image.new('RGB', (im1.width + im2.width, im1.height))
+    combined_images.paste(im1, (0, 0))
+    combined_images.paste(im2, (im1.width, 0))
+    return combined_images
+
+
+def random_color_generator():
+    color = np.random.randint(0, 256, size=3)
+    return tuple(color)

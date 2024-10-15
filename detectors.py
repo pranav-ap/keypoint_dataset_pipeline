@@ -1,13 +1,7 @@
 from utils.logger import logger
 from config import config
-from utils import get_best_device
 from ImageData import ImageSoloData
-import os
-import cv2
 import numpy as np
-import pandas as pd
-from PIL import Image, ImageDraw
-import matplotlib.pyplot as plt
 import torch
 import torchvision.transforms as T
 from typing import Optional
@@ -15,18 +9,21 @@ from abc import ABC, abstractmethod
 
 
 class KeypointDetector(ABC):
-    def __init__(self, num_keypoints):
-        self.device = get_best_device()
-        self.num_keypoints = num_keypoints
+    def __init__(self):
+        pass
 
     @abstractmethod
     def extract_keypoints(self):
         pass
 
+    @abstractmethod
+    def show_keypoints(self, path_a, path_b):
+        pass
+
 
 class DeDoDeDetector(KeypointDetector):
-    def __init__(self, image_names, num_keypoints=1000):
-        super().__init__(num_keypoints)
+    def __init__(self, image_names):
+        super().__init__()
 
         self.image_names = image_names
 
@@ -43,7 +40,7 @@ class DeDoDeDetector(KeypointDetector):
     Utils
     """
 
-    def preprocess_image(self, image_data: ImageSoloData):
+    def _preprocess_image(self, image_data: ImageSoloData):
         # Convert grayscale to RGB if necessary
         if image_data.image.mode != 'RGB':
             image_data.image = image_data.image.convert('RGB')
@@ -64,15 +61,15 @@ class DeDoDeDetector(KeypointDetector):
     Detect, Describe, Match
     """
 
-    def detect_describe(self, image_data: ImageSoloData):
+    def _detect_describe(self, image_data: ImageSoloData):
         """
         Returns an Image Data object that contains keypoints and descriptors
         """
 
-        standard_im = self.preprocess_image(image_data).to(self.device)[None]
+        standard_im = self._preprocess_image(image_data).to(config.device)[None]
         batch = {"image": standard_im}
 
-        detections = self.detector.detect(batch, self.num_keypoints)
+        detections = self.detector.detect(batch, config.num_keypoints_to_detect)
         image_data.keypoints = detections["keypoints"]
         image_data.confidences = detections["confidence"]
 
@@ -83,22 +80,30 @@ class DeDoDeDetector(KeypointDetector):
         a: Optional[ImageSoloData] = None
         b: Optional[ImageSoloData] = None
 
-        IMAGE_RESIZE = (784, 784)
-        FILE_POSTFIX = f'{config.POSTFIX_DEDODE}_{config.POSTFIX_EUROC}'
-
         for index in range(len(self.image_names) - 1):
             path_a = f"{config.images_dir_path}/{self.image_names[index]}"
             path_b = f"{config.images_dir_path}/{self.image_names[index + 1]}"
 
             if a is None:
-                a = ImageSoloData(path_a, resize=IMAGE_RESIZE, file_postfix=FILE_POSTFIX)
-                self.detect_describe(a)
+                a = ImageSoloData(
+                    path_a,
+                    resize=config.IMAGE_RESIZE,
+                )
 
-            b = ImageSoloData(path_b, resize=IMAGE_RESIZE, file_postfix=FILE_POSTFIX)
-            self.detect_describe(b)
+                self._detect_describe(a)
+
+            b = ImageSoloData(
+                path_b,
+                resize=config.IMAGE_RESIZE,
+            )
+
+            self._detect_describe(b)
 
             a.save_keypoints()
             a = b
 
         if b:
             b.save_keypoints()
+
+    def show_keypoints(self, path_a, path_b):
+        pass
