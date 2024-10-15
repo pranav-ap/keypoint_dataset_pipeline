@@ -1,3 +1,4 @@
+from utils.logger import logger
 from config import config
 import os
 import numpy as np
@@ -28,13 +29,17 @@ class ImageSoloData:
     """
 
     def load_keypoints(self):
-        keypoints_filepath = os.path.join(config.npy_dir_path, f"{self.image_name}_keypoints_{config.POSTFIX_FILE}.npy")
+        POSTFIX_FILE = f'{config.POSTFIX_MODEL}_{config.POSTFIX_DATASET}'
+
+        keypoints_filepath = os.path.join(config.npy_dir_path, f"{self.image_name}_keypoints_{POSTFIX_FILE}.npy")
         assert os.path.exists(keypoints_filepath)
         self.keypoints = np.load(keypoints_filepath)
+        logger.debug(f'LOAD self.keypoints.shape {self.keypoints.shape}')
 
-        descriptions_filepath = os.path.join(config.npy_dir_path, f"{self.image_name}_descriptions_{config.POSTFIX_FILE}.npy")
+        descriptions_filepath = os.path.join(config.npy_dir_path, f"{self.image_name}_descriptions_{POSTFIX_FILE}.npy")
         assert os.path.exists(descriptions_filepath)
         self.descriptions = np.load(descriptions_filepath)
+        logger.debug(f'LOAD self.descriptions.shape {self.descriptions.shape}')
 
     def save_keypoints(self):
         assert self.keypoints is not None and self.descriptions is not None
@@ -42,16 +47,19 @@ class ImageSoloData:
         keypoints_np = self.keypoints.cpu().numpy()
         descriptions_np = self.descriptions.cpu().numpy()
 
-        np.save(os.path.join(config.npy_dir_path, f"{self.image_name}_keypoints_{config.POSTFIX_FILE}.npy"), keypoints_np)
-        np.save(os.path.join(config.npy_dir_path, f"{self.image_name}_descriptions_{config.POSTFIX_FILE}.npy"), descriptions_np)
+        logger.debug(f'SAVE keypoints_np.shape {keypoints_np.shape}')
+        logger.debug(f'SAVE descriptions_np.shape {descriptions_np.shape}')
+
+        POSTFIX_FILE = f'{config.POSTFIX_MODEL}_{config.POSTFIX_DATASET}'
+
+        np.save(os.path.join(config.npy_dir_path, f"{self.image_name}_keypoints_{POSTFIX_FILE}.npy"), keypoints_np)
+        np.save(os.path.join(config.npy_dir_path, f"{self.image_name}_descriptions_{POSTFIX_FILE}.npy"), descriptions_np)
 
 
 class ImagePairData:
     def __init__(self, a: ImageSoloData, b: ImageSoloData):
         self.a = a
         self.b = b
-
-        self.filename = f'{a.image_name}_{b.image_name}_matches_{config.POSTFIX_FILE}.npy'
 
         self.left_matches = None
         self.right_matches = None
@@ -61,16 +69,29 @@ class ImagePairData:
     """
 
     def load_matches(self):
-        matches_filepath = os.path.join(config.npy_dir_path, self.filename)
+        POSTFIX_FILE = f'{config.POSTFIX_MODEL}_{config.POSTFIX_DATASET}'
+        filename = f'{self.a.image_name}_{self.b.image_name}_matches_{POSTFIX_FILE}.npy'
+
+        matches_filepath = os.path.join(config.npy_dir_path, filename)
         assert os.path.exists(matches_filepath)
 
         matches = np.load(matches_filepath)
+        logger.debug(f'LOAD matches.shape {matches.shape}')
 
         self.left_matches = matches[:, :2]
         self.right_matches = matches[:, 2:]
 
     def save_matches(self):
-        matches_filepath = os.path.join(config.npy_dir_path, self.filename)
-        matches = np.hstack([self.left_matches, self.right_matches])
+        POSTFIX_FILE = f'{config.POSTFIX_MODEL}_{config.POSTFIX_DATASET}'
+        filename = f'{self.a.image_name}_{self.b.image_name}_matches_{POSTFIX_FILE}.npy'
 
+        matches_filepath = os.path.join(config.npy_dir_path, filename)
+
+        left_matches_np = self.left_matches.cpu().numpy()
+        right_matches_np = self.right_matches.cpu().numpy()
+
+        logger.debug(f'SAVE left_matches_np.shape {left_matches_np.shape}')
+        logger.debug(f'SAVE right_matches_np.shape {right_matches_np.shape}')
+
+        matches = np.hstack([left_matches_np, right_matches_np])
         np.save(matches_filepath, matches)

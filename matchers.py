@@ -1,11 +1,9 @@
-from utils.logger import logger
+import cv2
 from utils import combine_images, random_color_generator
 from config import config
 from ImageData import ImageSoloData, ImagePairData
-import cv2
 import numpy as np
 from PIL import Image, ImageDraw
-import matplotlib.pyplot as plt
 from typing import Optional
 from abc import ABC, abstractmethod
 
@@ -15,66 +13,13 @@ class KeypointMatcher(ABC):
         pass
 
     @abstractmethod
-    def extract_matches(self):
+    def extract_matches(self, image_names):
         pass
-
-    @abstractmethod
-    def match_pair(self, pair: ImagePairData):
-        pass
-
-    """
-    Visualization
-    """
-
-    def show_matches(self, path_a, path_b):
-        a = ImageSoloData(path_a, resize=config.IMAGE_RESIZE)
-        a.load_keypoints()
-
-        b = ImageSoloData(path_b, resize=config.IMAGE_RESIZE)
-        b.load_keypoints()
-
-        pair = ImagePairData(a, b)
-        pair.load_matches()
-
-        self._visualize_keypoints(
-            points_in_im1=pair.left_matches,
-            points_in_im2=pair.right_matches,
-            im1=a.image,
-            im2=b.image,
-        )
-
-    @staticmethod
-    def _visualize_keypoints(points_in_im1, points_in_im2, im1: Image, im2: Image):
-        combined_images = combine_images(im1, im2)
-        draw = ImageDraw.Draw(combined_images)
-
-        circle_radius = 10
-
-        for pt1, pt2 in zip(points_in_im1, points_in_im2):
-            y_im1, x_im1 = pt1
-            y_im2, x_im2 = pt2
-
-            random_color = random_color_generator()
-
-            draw.ellipse(
-                (x_im1 - circle_radius, y_im1 - circle_radius, x_im1 + circle_radius, y_im1 + circle_radius),
-                outline=random_color,
-                width=5
-            )
-
-            draw.ellipse(
-                (im1.width + x_im2 - circle_radius, y_im2 - circle_radius, im1.width + x_im2 + circle_radius, y_im2 + circle_radius),
-                outline=random_color,
-                width=5
-            )
-
-        return combined_images
 
 
 class DeDoDeMatcher(KeypointMatcher):
-    def __init__(self, image_names):
+    def __init__(self):
         super().__init__()
-        self.image_names = image_names
 
         from DeDoDe.matchers.dual_softmax_matcher import DualSoftMaxMatcher
         self.matcher = DualSoftMaxMatcher()
@@ -84,59 +29,42 @@ class DeDoDeMatcher(KeypointMatcher):
     """
 
     @staticmethod
-    def _plot_image(image):
-        # Convert BGR to RGB for matplotlib
-        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-        # Plot the image
-        plt.figure(figsize=(30, 30))
-        plt.imshow(image_rgb)
-        plt.axis('off')
-        plt.show()
-
-    @staticmethod
-    def _draw_matches(a, left_matches, b, right_matches):
-        left_matches = [cv2.KeyPoint(x, y, 1.) for x, y in left_matches]
-        right_matches = [cv2.KeyPoint(x, y, 1.) for x, y in right_matches]
-
-        count = len(left_matches)
-        matches = [cv2.DMatch(idx, idx, 0.) for idx in range(count)]
-
-        a, b = np.array(a), np.array(b)
-
-        match_image = cv2.drawMatches(
-            a, left_matches,
-            b, right_matches,
-            matches,
-            outImg=None,
-        )
-
-        return match_image
-
-    def show_matches(self, path_a, path_b):
-        a = ImageSoloData(
-            path_a,
-            resize=config.IMAGE_RESIZE,
-        )
-
+    def show_all_matches(path_a, path_b, num_points=10):
+        a = ImageSoloData(path_a, resize=config.IMAGE_RESIZE)
         a.load_keypoints()
 
-        b = ImageSoloData(
-            path_b,
-            resize=config.IMAGE_RESIZE,
-        )
-
+        b = ImageSoloData(path_b, resize=config.IMAGE_RESIZE)
         b.load_keypoints()
 
         pair = ImagePairData(a, b)
         pair.load_matches()
 
-        image = self._draw_matches(
-            a.image, pair.left_matches,
-            b.image, pair.right_matches
+        a, b = np.array(a.image), np.array(b.image)
+
+        left_matches = [
+            cv2.KeyPoint(x, y, 1.)
+            for x, y in pair.left_matches
+        ]
+
+        right_matches = [
+            cv2.KeyPoint(x, y, 1.)
+            for x, y in pair.right_matches
+        ]
+
+        num_points = len(left_matches) if num_points is None else min(num_points, len(left_matches))
+        matches = [cv2.DMatch(idx, idx, 0.) for idx in range(num_points)]
+
+        image_vis = cv2.drawMatches(
+            a, left_matches,
+            b, right_matches,
+            matches,
+            outImg=None,
+            flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
         )
 
-        self._plot_image(image)
+        image_vis = Image.fromarray(image_vis)
+
+        return image_vis
 
     """
     Match
@@ -159,40 +87,31 @@ class DeDoDeMatcher(KeypointMatcher):
             a.H, a.W, b.H, b.W
         )
 
-    def extract_matches(self):
+    def extract_matches(self, image_names):
         a: Optional[ImageSoloData] = None
 
-        for index in range(len(self.image_names) - 1):
-            path_a = f"{config.images_dir_path}/{self.image_names[index]}"
-            path_b = f"{config.images_dir_path}/{self.image_names[index + 1]}"
+        for index in range(len(image_names) - 1):
+            path_a = f"{config.images_dir_path}/{image_names[index]}"
+            path_b = f"{config.images_dir_path}/{image_names[index + 1]}"
 
             if a is None:
-                a = ImageSoloData(
-                    path_a,
-                    resize=config.IMAGE_RESIZE
-                )
-
+                a = ImageSoloData(path_a, resize=config.IMAGE_RESIZE)
                 a.load_keypoints()
 
-            b = ImageSoloData(
-                path_b,
-                resize=config.IMAGE_RESIZE
-            )
-
+            b = ImageSoloData(path_b, resize=config.IMAGE_RESIZE)
             b.load_keypoints()
 
             pair = ImagePairData(a, b)
 
-            self.extract_matches(pair)
+            self.match_pair(pair)
             pair.save_matches()
 
             a = b
 
 
 class RoMaMatcher(KeypointMatcher):
-    def __init__(self, image_names):
+    def __init__(self):
         super().__init__()
-        self.image_names = image_names
 
         from romatch import roma_outdoor
         self.model = roma_outdoor(
@@ -241,6 +160,85 @@ class RoMaMatcher(KeypointMatcher):
         return points
 
     """
+    Visualize
+    """
+
+    @staticmethod
+    def _visualize_keypoints(points_in_im1, points_in_im2, im1: Image, im2: Image):
+        combined_images = combine_images(im1, im2)
+        draw = ImageDraw.Draw(combined_images)
+
+        circle_radius = config.circle_radius
+
+        for pt1, pt2 in zip(points_in_im1, points_in_im2):
+            y_im1, x_im1 = pt1
+            y_im2, x_im2 = pt2
+
+            random_color = random_color_generator()
+
+            draw.ellipse(
+                (x_im1 - circle_radius, y_im1 - circle_radius, x_im1 + circle_radius, y_im1 + circle_radius),
+                outline=random_color,
+                width=5
+            )
+
+            draw.ellipse(
+                (im1.width + x_im2 - circle_radius, y_im2 - circle_radius, im1.width + x_im2 + circle_radius, y_im2 + circle_radius),
+                outline=random_color,
+                width=5
+            )
+
+        return combined_images
+
+    def show_random_matches(self, path_a, path_b, confidence_threshold=0.6, num_points=5):
+        """
+        This function picks pixels from image 1 that have >= confidence_threshold.
+        Then shows their matches from image 2
+        """
+
+        a = ImageSoloData(path_a, resize=config.IMAGE_RESIZE)
+        b = ImageSoloData(path_b, resize=config.IMAGE_RESIZE)
+        pair = ImagePairData(a, b)
+
+        warp, certainty = self.match_pair(pair)
+
+        points_in_im1 = self.get_points_from_certainty(certainty, confidence_threshold, num_points)
+        points_in_im2 = self.get_corresponding_points(points_in_im1, warp)
+
+        self._visualize_keypoints(
+            points_in_im1=points_in_im1,
+            points_in_im2=points_in_im2,
+            im1=a.image,
+            im2=b.image,
+        )
+
+    def show_matches_from_keypoints(self, path_a, path_b, num_points=5):
+        """
+        This function picks random keypoint pixels from image 1
+        Then shows their matches from image 2
+        """
+
+        a = ImageSoloData(path_a, resize=config.IMAGE_RESIZE)
+        a.load_keypoints()
+
+        b = ImageSoloData(path_b, resize=config.IMAGE_RESIZE)
+        pair = ImagePairData(a, b)
+
+        warp, certainty = self.match_pair(pair)
+
+        points_in_im1 = a.keypoints
+        num_points = len(points_in_im1) if num_points is None else min(num_points, len(points_in_im1))
+        points_in_im1 = np.random.choice(points_in_im1, size=num_points, replace=False)
+        points_in_im2 = self.get_corresponding_points(points_in_im1, warp)
+
+        self._visualize_keypoints(
+            points_in_im1=points_in_im1,
+            points_in_im2=points_in_im2,
+            im1=a.image,
+            im2=b.image,
+        )
+
+    """
     Match
     """
 
@@ -253,32 +251,27 @@ class RoMaMatcher(KeypointMatcher):
 
         return warp, certainty
 
-    def extract_matches(self):
+    def extract_matches(self, image_names):
         a: Optional[ImageSoloData] = None
 
-        for index in range(len(self.image_names) - 1):
-            path_a = f"{config.images_dir_path}/{self.image_names[index]}"
-            path_b = f"{config.images_dir_path}/{self.image_names[index + 1]}"
+        for index in range(len(image_names) - 1):
+            path_a = f"{config.images_dir_path}/{image_names[index]}"
+            path_b = f"{config.images_dir_path}/{image_names[index + 1]}"
 
             if a is None:
-                a = ImageSoloData(
-                    path_a,
-                    resize=config.IMAGE_RESIZE
-                )
-
+                a = ImageSoloData(path_a, resize=config.IMAGE_RESIZE)
                 a.load_keypoints()
 
-            b = ImageSoloData(
-                path_b,
-                resize=config.IMAGE_RESIZE
-            )
-
+            b = ImageSoloData(path_b, resize=config.IMAGE_RESIZE)
             pair = ImagePairData(a, b)
+
             warp, certainty = self.match_pair(pair)
 
             points_in_im1 = a.keypoints
             points_in_im2 = self.get_corresponding_points(points_in_im1, warp)
-            b.keypoints = points_in_im2
-            b.save_keypoints()
 
+            pair.left_matches = np.array(points_in_im1)
+            pair.right_matches = np.array(points_in_im2)
+
+            pair.save_matches()
             a = b
