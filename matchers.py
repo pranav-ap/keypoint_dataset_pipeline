@@ -3,6 +3,7 @@ from utils import combine_images, random_color_generator
 from config import config
 from ImageData import ImageSoloData, ImagePairData
 import numpy as np
+import torch
 from PIL import Image, ImageDraw
 from typing import Optional
 from abc import ABC, abstractmethod
@@ -70,13 +71,13 @@ class DeDoDeMatcher(KeypointMatcher):
     Match
     """
 
-    def match_pair(self, pair: ImagePairData):
+    def _match_pair(self, pair: ImagePairData):
         a: ImageSoloData = pair.a
         b: ImageSoloData = pair.b
 
         matches_A, matches_B, batch_ids = self.matcher.match(
-            a.keypoints, a.descriptions,
-            b.keypoints, b.descriptions,
+            torch.tensor(a.keypoints), torch.tensor(a.descriptions),
+            torch.tensor(b.keypoints), torch.tensor(b.descriptions),
             normalize=True,
             inv_temp=20,
             threshold=0.1
@@ -103,7 +104,7 @@ class DeDoDeMatcher(KeypointMatcher):
 
             pair = ImagePairData(a, b)
 
-            self.match_pair(pair)
+            self._match_pair(pair)
             pair.save_matches()
 
             a = b
@@ -127,7 +128,7 @@ class RoMaMatcher(KeypointMatcher):
     Utils
     """
 
-    def get_corresponding_points(self, points_in_im1, warp):
+    def _get_corresponding_points(self, points_in_im1, warp):
         points_in_im2 = []
 
         for pt in points_in_im1:
@@ -142,9 +143,10 @@ class RoMaMatcher(KeypointMatcher):
         return points_in_im2
 
     @staticmethod
-    def get_points_from_certainty(certainty, threshold=0.6, num_points=5):
+    def _get_points_from_certainty(certainty, threshold=0.6, num_points=5):
+        certainty_cpu = certainty.cpu().numpy() if isinstance(certainty, torch.Tensor) else certainty
         # Convert certainty to a binary mask where values are above the threshold
-        mask = certainty > threshold
+        mask = certainty_cpu > threshold
 
         # Get the coordinates of the points where mask is True
         y_coords, x_coords = np.where(mask)
@@ -200,17 +202,19 @@ class RoMaMatcher(KeypointMatcher):
         b = ImageSoloData(path_b, resize=config.IMAGE_RESIZE)
         pair = ImagePairData(a, b)
 
-        warp, certainty = self.match_pair(pair)
+        warp, certainty = self._match_pair(pair)
 
-        points_in_im1 = self.get_points_from_certainty(certainty, confidence_threshold, num_points)
-        points_in_im2 = self.get_corresponding_points(points_in_im1, warp)
+        points_in_im1 = self._get_points_from_certainty(certainty, confidence_threshold, num_points)
+        points_in_im2 = self._get_corresponding_points(points_in_im1, warp)
 
-        self._visualize_keypoints(
+        img_vis = self._visualize_keypoints(
             points_in_im1=points_in_im1,
             points_in_im2=points_in_im2,
             im1=a.image,
             im2=b.image,
         )
+
+        return img_vis
 
     def show_matches_from_keypoints(self, path_a, path_b, num_points=5):
         """
@@ -224,25 +228,27 @@ class RoMaMatcher(KeypointMatcher):
         b = ImageSoloData(path_b, resize=config.IMAGE_RESIZE)
         pair = ImagePairData(a, b)
 
-        warp, certainty = self.match_pair(pair)
+        warp, certainty = self._match_pair(pair)
 
-        points_in_im1 = a.keypoints
+        points_in_im1 = a.keypoints.squeeze(0)
         num_points = len(points_in_im1) if num_points is None else min(num_points, len(points_in_im1))
         points_in_im1 = np.random.choice(points_in_im1, size=num_points, replace=False)
-        points_in_im2 = self.get_corresponding_points(points_in_im1, warp)
+        points_in_im2 = self._get_corresponding_points(points_in_im1, warp)
 
-        self._visualize_keypoints(
+        img_vis = self._visualize_keypoints(
             points_in_im1=points_in_im1,
             points_in_im2=points_in_im2,
             im1=a.image,
             im2=b.image,
         )
 
+        return img_vis
+
     """
     Match
     """
 
-    def match_pair(self, pair: ImagePairData):
+    def _match_pair(self, pair: ImagePairData):
         warp, certainty = self.model.match(
             pair.a.image_path,
             pair.b.image_path,
@@ -263,12 +269,14 @@ class RoMaMatcher(KeypointMatcher):
                 a.load_keypoints()
 
             b = ImageSoloData(path_b, resize=config.IMAGE_RESIZE)
+            b.load_keypoints()
+
             pair = ImagePairData(a, b)
 
-            warp, certainty = self.match_pair(pair)
+            warp, certainty = self._match_pair(pair)
 
-            points_in_im1 = a.keypoints
-            points_in_im2 = self.get_corresponding_points(points_in_im1, warp)
+            points_in_im1 = a.keypoints.squeeze(0)
+            points_in_im2 = self._get_corresponding_points(points_in_im1, warp)
 
             pair.left_matches = np.array(points_in_im1)
             pair.right_matches = np.array(points_in_im2)

@@ -1,6 +1,7 @@
 from utils.logger import logger
 from config import config
 import os
+import torch
 import numpy as np
 from PIL import Image
 from pathlib import Path
@@ -44,8 +45,8 @@ class ImageSoloData:
     def save_keypoints(self):
         assert self.keypoints is not None and self.descriptions is not None
 
-        keypoints_np = self.keypoints.cpu().numpy()
-        descriptions_np = self.descriptions.cpu().numpy()
+        keypoints_np = self.keypoints.cpu().numpy() if isinstance(self.keypoints, torch.Tensor) else self.keypoints
+        descriptions_np = self.descriptions.cpu().numpy() if isinstance(self.descriptions, torch.Tensor) else self.descriptions
 
         logger.debug(f'SAVE keypoints_np.shape {keypoints_np.shape}')
         logger.debug(f'SAVE descriptions_np.shape {descriptions_np.shape}')
@@ -87,8 +88,8 @@ class ImagePairData:
 
         matches_filepath = os.path.join(config.npy_dir_path, filename)
 
-        left_matches_np = self.left_matches.cpu().numpy()
-        right_matches_np = self.right_matches.cpu().numpy()
+        left_matches_np = self.left_matches.cpu().numpy() if isinstance(self.left_matches, torch.Tensor) else self.left_matches
+        right_matches_np = self.right_matches.cpu().numpy() if isinstance(self.right_matches, torch.Tensor) else self.right_matches
 
         logger.debug(f'SAVE left_matches_np.shape {left_matches_np.shape}')
         logger.debug(f'SAVE right_matches_np.shape {right_matches_np.shape}')
