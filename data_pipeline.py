@@ -29,7 +29,9 @@ class DataPipeline:
         image_names = self.get_sorted_image_names()
         image_names = image_names[:5]
 
-        config.POSTFIX_MODEL = 'dedode'
+        config.POSTFIX_DETECTOR_MODEL = 'dedode'
+        config.POSTFIX_MATCHER_MODEL = 'dedode'
+
         detector = DeDoDeDetector()
         detector.extract_keypoints(image_names)
 

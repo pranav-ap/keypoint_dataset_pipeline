@@ -1,10 +1,9 @@
 import cv2
-from utils import combine_images, random_color_generator
 from config import config
 from ImageData import ImageSoloData, ImagePairData
 import numpy as np
 import torch
-from PIL import Image, ImageDraw
+from PIL import Image
 from typing import Optional
 from abc import ABC, abstractmethod
 
@@ -166,31 +165,27 @@ class RoMaMatcher(KeypointMatcher):
     """
 
     @staticmethod
-    def _visualize_keypoints(points_in_im1, points_in_im2, im1: Image, im2: Image):
-        combined_images = combine_images(im1, im2)
-        draw = ImageDraw.Draw(combined_images)
+    def _plot_matches(pair: ImagePairData, points_in_im1, points_in_im2, num_points):
+        left_matches = [cv2.KeyPoint(x, y, 1.) for x, y in points_in_im1]
+        right_matches = [cv2.KeyPoint(x, y, 1.) for x, y in points_in_im2]
 
-        circle_radius = config.circle_radius
+        assert len(left_matches) == len(right_matches)
 
-        for pt1, pt2 in zip(points_in_im1, points_in_im2):
-            y_im1, x_im1 = pt1
-            y_im2, x_im2 = pt2
+        num_points = len(left_matches) if num_points is None else min(num_points, len(left_matches))
+        matches = [cv2.DMatch(idx, idx, 0.) for idx in range(num_points)]
 
-            random_color = random_color_generator()
+        a, b = np.array(pair.a.image), np.array(pair.b.image)
 
-            draw.ellipse(
-                (x_im1 - circle_radius, y_im1 - circle_radius, x_im1 + circle_radius, y_im1 + circle_radius),
-                outline=random_color,
-                width=5
-            )
+        image_vis = cv2.drawMatches(
+            a, left_matches,
+            b, right_matches,
+            matches,
+            outImg=None,
+            flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
+        )
 
-            draw.ellipse(
-                (im1.width + x_im2 - circle_radius, y_im2 - circle_radius, im1.width + x_im2 + circle_radius, y_im2 + circle_radius),
-                outline=random_color,
-                width=5
-            )
-
-        return combined_images
+        image_vis = Image.fromarray(image_vis)
+        return image_vis
 
     def show_random_matches(self, path_a, path_b, confidence_threshold=0.6, num_points=5):
         """
@@ -207,14 +202,7 @@ class RoMaMatcher(KeypointMatcher):
         points_in_im1 = self._get_points_from_certainty(certainty, confidence_threshold, num_points)
         points_in_im2 = self._get_corresponding_points(points_in_im1, warp)
 
-        img_vis = self._visualize_keypoints(
-            points_in_im1=points_in_im1,
-            points_in_im2=points_in_im2,
-            im1=a.image,
-            im2=b.image,
-        )
-
-        return img_vis
+        return self._plot_matches(pair, points_in_im1, points_in_im2, num_points)
 
     def show_matches_from_keypoints(self, path_a, path_b, num_points=5):
         """
@@ -226,23 +214,20 @@ class RoMaMatcher(KeypointMatcher):
         a.load_keypoints()
 
         b = ImageSoloData(path_b, resize=config.IMAGE_RESIZE)
+        b.load_keypoints()
+
         pair = ImagePairData(a, b)
 
         warp, certainty = self._match_pair(pair)
 
-        points_in_im1 = a.keypoints.squeeze(0)
+        points_in_im1 = a.keypoints.cpu().numpy() if isinstance(a.keypoints, torch.Tensor) else a.keypoints
+        points_in_im1 = points_in_im1.squeeze(0)
         num_points = len(points_in_im1) if num_points is None else min(num_points, len(points_in_im1))
         points_in_im1 = np.random.choice(points_in_im1, size=num_points, replace=False)
+
         points_in_im2 = self._get_corresponding_points(points_in_im1, warp)
 
-        img_vis = self._visualize_keypoints(
-            points_in_im1=points_in_im1,
-            points_in_im2=points_in_im2,
-            im1=a.image,
-            im2=b.image,
-        )
-
-        return img_vis
+        return self._plot_matches(pair, points_in_im1, points_in_im2, num_points)
 
     """
     Match
@@ -275,7 +260,8 @@ class RoMaMatcher(KeypointMatcher):
 
             warp, certainty = self._match_pair(pair)
 
-            points_in_im1 = a.keypoints.squeeze(0)
+            points_in_im1 = a.keypoints.cpu().numpy() if isinstance(a.keypoints, torch.Tensor) else a.keypoints
+            points_in_im1 = points_in_im1.squeeze(0)
             points_in_im2 = self._get_corresponding_points(points_in_im1, warp)
 
             pair.left_matches = np.array(points_in_im1)

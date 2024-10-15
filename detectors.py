@@ -66,7 +66,7 @@ class DeDoDeDetector(KeypointDetector):
         image = np.array(im.image)
 
         keypoints = [
-            cv2.KeyPoint((x + 1) * (width/2), (y+1) * (height/2), 1.)
+            cv2.KeyPoint((x + 1) * (width / 2), (y + 1) * (height / 2), 1.)
             for x, y in im.keypoints.squeeze(0)
         ]
 

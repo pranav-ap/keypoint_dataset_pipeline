@@ -10,10 +10,9 @@ class InferenceConfig:
     npy_dir_path: str = ''
     csv_path: str = ''
 
-    POSTFIX_MODEL: str = ''
+    POSTFIX_DETECTOR_MODEL: str = ''
+    POSTFIX_MATCHER_MODEL: str = ''
     POSTFIX_DATASET: str = ''
-
-    circle_radius: int = 8
 
     """
     INTERNAL USE
