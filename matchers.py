@@ -240,8 +240,6 @@ class RoMaMatcher(KeypointMatcher):
 
         points_in_im2 = self._get_corresponding_points(points_in_im1, warp)
 
-        # todo store p of im2
-
         return self._plot_matches(pair, points_in_im1, points_in_im2, num_points)
 
     """
