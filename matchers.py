@@ -21,6 +21,8 @@ class DeDoDeMatcher(KeypointMatcher):
     def __init__(self):
         super().__init__()
 
+        config.IMAGE_RESIZE = (784, 784)
+
         from DeDoDe.matchers.dual_softmax_matcher import DualSoftMaxMatcher
         self.matcher = DualSoftMaxMatcher()
 
@@ -123,6 +125,8 @@ class RoMaMatcher(KeypointMatcher):
         self.model.symmetric = False
         self.H, self.W = self.model.get_output_resolution()
 
+        config.IMAGE_RESIZE = (self.W, self.H)  # (1152, 864)
+
     """
     Utils
     """
@@ -131,13 +135,16 @@ class RoMaMatcher(KeypointMatcher):
         points_in_im2 = []
 
         for pt in points_in_im1:
-            y_im1, x_im1 = pt
+            x_im1, y_im1 = pt
+
+            # Cast to integers
+            x_im1, y_im1 = int(x_im1), int(y_im1)
 
             w = warp[y_im1, x_im1]
             A, B = self.model.to_pixel_coordinates(w, self.H, self.W, self.H, self.W)
             x_im2, y_im2 = B
 
-            points_in_im2.append((int(y_im2.item()), int(x_im2.item())))
+            points_in_im2.append((int(x_im2.item()), int(y_im2.item())))
 
         return points_in_im2
 
@@ -156,7 +163,7 @@ class RoMaMatcher(KeypointMatcher):
         else:
             indices = np.arange(len(y_coords))  # Take all if not enough points
 
-        points = [(y_coords[i], x_coords[i]) for i in indices]
+        points = [(x_coords[i], y_coords[i]) for i in indices]
 
         return points
 
@@ -166,8 +173,8 @@ class RoMaMatcher(KeypointMatcher):
 
     @staticmethod
     def _plot_matches(pair: ImagePairData, points_in_im1, points_in_im2, num_points):
-        left_matches = [cv2.KeyPoint(x, y, 1.) for x, y in points_in_im1]
-        right_matches = [cv2.KeyPoint(x, y, 1.) for x, y in points_in_im2]
+        left_matches = [cv2.KeyPoint(int(x), int(y), 1.) for x, y in points_in_im1]
+        right_matches = [cv2.KeyPoint(int(x), int(y), 1.) for x, y in points_in_im2]
 
         assert len(left_matches) == len(right_matches)
 
@@ -187,7 +194,7 @@ class RoMaMatcher(KeypointMatcher):
         image_vis = Image.fromarray(image_vis)
         return image_vis
 
-    def show_random_matches(self, path_a, path_b, confidence_threshold=0.6, num_points=5):
+    def extract_and_show_random_matches(self, path_a, path_b, confidence_threshold=0.6, num_points=5):
         """
         This function picks pixels from image 1 that have >= confidence_threshold.
         Then shows their matches from image 2
@@ -204,7 +211,7 @@ class RoMaMatcher(KeypointMatcher):
 
         return self._plot_matches(pair, points_in_im1, points_in_im2, num_points)
 
-    def show_matches_from_keypoints(self, path_a, path_b, num_points=5):
+    def extract_and_show_matches_from_keypoints(self, path_a, path_b, num_points=5):
         """
         This function picks random keypoint pixels from image 1
         Then shows their matches from image 2
@@ -223,9 +230,17 @@ class RoMaMatcher(KeypointMatcher):
         points_in_im1 = a.keypoints.cpu().numpy() if isinstance(a.keypoints, torch.Tensor) else a.keypoints
         points_in_im1 = points_in_im1.squeeze(0)
         num_points = len(points_in_im1) if num_points is None else min(num_points, len(points_in_im1))
-        points_in_im1 = np.random.choice(points_in_im1, size=num_points, replace=False)
+
+        width, height = a.image.size
+
+        points_in_im1 = [
+            ((x + 1) * (width / 2), (y + 1) * (height / 2))
+            for x, y in points_in_im1
+        ]
 
         points_in_im2 = self._get_corresponding_points(points_in_im1, warp)
+
+        # todo store p of im2
 
         return self._plot_matches(pair, points_in_im1, points_in_im2, num_points)
 
@@ -262,6 +277,14 @@ class RoMaMatcher(KeypointMatcher):
 
             points_in_im1 = a.keypoints.cpu().numpy() if isinstance(a.keypoints, torch.Tensor) else a.keypoints
             points_in_im1 = points_in_im1.squeeze(0)
+
+            width, height = a.image.size
+
+            points_in_im1 = [
+                ((x + 1) * (width / 2), (y + 1) * (height / 2))
+                for x, y in points_in_im1
+            ]
+
             points_in_im2 = self._get_corresponding_points(points_in_im1, warp)
 
             pair.left_matches = np.array(points_in_im1)

@@ -23,6 +23,8 @@ class DeDoDeDetector(KeypointDetector):
     def __init__(self):
         super().__init__()
 
+        config.IMAGE_RESIZE = (784, 784)
+
         from DeDoDe import dedode_detector_L, dedode_descriptor_G
         self.detector = dedode_detector_L(weights=None)
         self.descriptor = dedode_descriptor_G(weights=None, dinov2_weights=None)
@@ -80,7 +82,6 @@ class DeDoDeDetector(KeypointDetector):
         )
 
         image_vis = Image.fromarray(image_vis)
-
         return image_vis
 
     """

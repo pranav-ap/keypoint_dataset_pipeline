@@ -18,7 +18,7 @@ class InferenceConfig:
     INTERNAL USE
     """
 
-    device = None
+    device = 'cpu'
 
 
 config = InferenceConfig()
