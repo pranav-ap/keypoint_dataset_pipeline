@@ -9,6 +9,7 @@ class InferenceConfig:
     images_dir_path: str = ''
     npy_dir_path: str = ''
     csv_path: str = ''
+    filter_csv_path: str = ''
 
     POSTFIX_DETECTOR_MODEL: str = ''
     POSTFIX_MATCHER_MODEL: str = ''

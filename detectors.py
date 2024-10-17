@@ -1,4 +1,3 @@
-import cv2
 from config import config
 from ImageData import ImageSoloData
 import numpy as np

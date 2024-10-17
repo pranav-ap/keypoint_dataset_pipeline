@@ -24,7 +24,7 @@ class Visualizer:
         return image_vis
 
     @staticmethod
-    def plot_matches(pair: ImagePairData, num_points):
+    def plot_matches(pair: ImagePairData, num_points=None):
         assert pair.a.image is not None
         assert pair.b.image is not None
         assert pair.left_matches_coords is not None

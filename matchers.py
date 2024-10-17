@@ -1,4 +1,3 @@
-import cv2
 from config import config
 from ImageData import ImageSoloData, DSM_ImagePairData, RoMa_ImagePairData
 from visualizer import Visualizer
@@ -66,7 +65,7 @@ class DSMatcher(KeypointMatcher):
             a = b
 
     @staticmethod
-    def show_matches(path_a, path_b, num_points=10):
+    def show_keypoint_matches(path_a, path_b, num_points=5):
         a = ImageSoloData(path_a)
         a.load_keypoints()
 
@@ -121,7 +120,7 @@ class RoMaMatcher(KeypointMatcher):
             a = b
 
     @staticmethod
-    def get_keypoint_matches(path_a, path_b) -> RoMa_ImagePairData:
+    def get_keypoint_matches(path_a, path_b, confidence_threshold=0.6) -> RoMa_ImagePairData:
         a = ImageSoloData(path_a)
         a.load_keypoints()
 
@@ -131,8 +130,10 @@ class RoMaMatcher(KeypointMatcher):
         pair: RoMa_ImagePairData = RoMa_ImagePairData(a, b)
         pair.load_warp_certainty()
 
-        pair.set_left_matches_coords(a.keypoints_coords)
-        right_matches_coords = pair.get_target_keypoints(a.keypoints_coords)
+        left_matches_coords = a.keypoints_coords
+        left_matches_coords, right_matches_coords = pair.get_target_keypoints(left_matches_coords, confidence_threshold)
+
+        pair.set_left_matches_coords(left_matches_coords)
         pair.set_right_matches_coords(right_matches_coords)
 
         return pair
@@ -146,20 +147,24 @@ class RoMaMatcher(KeypointMatcher):
         pair.load_warp_certainty()
 
         left_matches_coords = pair.get_random_reference_keypoints(confidence_threshold, num_points)
-        right_matches_coords = pair.get_target_keypoints(left_matches_coords)
+        left_matches_coords, right_matches_coords = pair.get_target_keypoints(left_matches_coords, confidence_threshold)
 
         pair.set_left_matches_coords(left_matches_coords)
         pair.set_right_matches_coords(right_matches_coords)
 
         return pair
 
-    def show_keypoint_matches(self, path_a, path_b, num_points=5):
+    def show_keypoint_matches(self, path_a, path_b, confidence_threshold=0.6, num_points=None):
         """
         This function picks random keypoint pixels from image 1
         Then shows their matches from image 2
         """
 
-        pair = self.get_keypoint_matches(path_a, path_b)
+        pair = self.get_keypoint_matches(
+            path_a, path_b,
+            confidence_threshold=confidence_threshold
+        )
+
         return Visualizer.plot_matches(pair, num_points)
 
     def show_random_matches(self, path_a, path_b, confidence_threshold=0.6, num_points=5):
@@ -168,5 +173,10 @@ class RoMaMatcher(KeypointMatcher):
         Then shows their matches from image 2
         """
 
-        pair = self.get_random_matches(path_a, path_b, confidence_threshold, num_points)
+        pair = self.get_random_matches(
+            path_a, path_b,
+            confidence_threshold=confidence_threshold,
+            num_points=num_points
+        )
+
         return Visualizer.plot_matches(pair, num_points)

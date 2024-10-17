@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from config import config
 import cv2
 import os
@@ -10,7 +10,7 @@ from pathlib import Path
 def load_tensor(filename: str) -> torch.tensor:
     filepath: str = os.path.join(config.npy_dir_path, filename)
     assert os.path.exists(filepath)
-    tensor: torch.tensor = torch.load(filepath)
+    tensor: torch.tensor = torch.load(filepath, weights_only=True)
     return tensor
 
 
@@ -189,30 +189,31 @@ class RoMa_ImagePairData(ImagePairData):
             indices = torch.arange(len(y_coords))  # Take all if not enough points
 
         points = [
-            cv2.KeyPoint(x_coords[i].item(), y_coords[i].item(), 1.)
+            cv2.KeyPoint(int(x_coords[i].item()), int(y_coords[i].item()), 1.)
             for i in indices
         ]
 
         return points
 
-    def get_target_keypoints(self, reference_keypoints: List[cv2.KeyPoint]) -> List[cv2.KeyPoint]:
+    def get_target_keypoints(self, reference_keypoints: List[cv2.KeyPoint], confidence_threshold=0.6) -> Tuple[List[cv2.KeyPoint], List[cv2.KeyPoint]]:
         target_keypoints = []
-        # H, W = a.image.height, a.image.width
+        accepted_reference_keypoints = []
 
         for pt in reference_keypoints:
             x_a, y_a = pt.pt
             x_a, y_a = int(x_a), int(y_a)
 
-            # w = warp[y_a, x_a]
-            # A, B = self.model.to_pixel_coordinates(w, H, W, H, W)
-            # x_b, y_b = B
+            conf = self.certainty[y_a, x_a]
+            if conf <= confidence_threshold:
+                continue
 
             _, _, x_b, y_b = self.pixel_coords[y_a, x_a]
             x_b, y_b = int(x_b.item()), int(y_b.item())
 
+            accepted_reference_keypoints.append(pt)
             target_keypoints.append(cv2.KeyPoint(x_b, y_b, 1.))
 
-        return target_keypoints
+        return accepted_reference_keypoints, target_keypoints
 
     """
     Load & Save
