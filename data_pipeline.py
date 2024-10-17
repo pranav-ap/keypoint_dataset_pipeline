@@ -1,7 +1,9 @@
+from typing import List, Tuple
+
 from config import config
 from utils import get_best_device, make_clear_directory
 from detectors import DeDoDeDetector
-from matchers import DeDoDeMatcher, RoMaMatcher
+from matchers import DSMatcher, RoMaMatcher
 import pandas as pd
 
 
@@ -35,6 +37,8 @@ class DataPipeline:
         config.POSTFIX_DETECTOR_MODEL = 'dedode'
         config.POSTFIX_MATCHER_MODEL = 'roma'
 
+        config.IMAGE_RESIZE = (784, 784)
+
     @staticmethod
     def config_dedode_roma_matching_samples():
         config.images_dir_path = "/kaggle/input/matching-samples"
@@ -47,8 +51,10 @@ class DataPipeline:
         config.POSTFIX_DETECTOR_MODEL = 'dedode'
         config.POSTFIX_MATCHER_MODEL = 'roma'
 
+        config.IMAGE_RESIZE = (784, 784)
+
     @staticmethod
-    def get_sorted_image_names():
+    def get_sorted_image_names_list():
         df = pd.read_csv(config.csv_path)
         df['timestamp'] = pd.to_datetime(df['#timestamp [ns]'], unit='ns')
         df = df.sort_values(by='timestamp')
@@ -56,10 +62,22 @@ class DataPipeline:
 
         return image_names
 
+    def get_sorted_image_name_pairs(self, step=1):
+        image_names = self.get_sorted_image_names_list()
+        image_pairs: List[Tuple[str, str]] = []
+
+        for index in range(0, len(image_names) - step):
+            name_a = image_names[index]
+            name_b = image_names[index + step]
+
+            image_pairs.append((name_a, name_b))
+
+        return image_pairs
+
     def run(self):
         self.config_dedode_dedode_euroc()
 
-        image_names = self.get_sorted_image_names()
+        image_names = self.get_sorted_image_names_list()
         image_names = image_names[:5]
 
         detector = DeDoDeDetector()

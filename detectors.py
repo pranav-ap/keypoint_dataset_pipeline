@@ -64,30 +64,13 @@ class DeDoDeDetector(KeypointDetector):
         batch = {"image": standard_im}
 
         detections = self.detector.detect(batch, config.num_keypoints_to_detect)
-        image_data.keypoints = detections["keypoints"]
+
+        keypoints = detections["keypoints"]
+        image_data.set_keypoints(keypoints)
+
         image_data.confidences = detections["confidence"]
 
-        """
-        >> keypoints
-        tensor([[[ 0.9809,  0.7462],
-                 [ 0.7054,  0.7487],
-                 [-0.1314,  0.5293],
-                 ...,
-                 [-0.2793,  0.3482],
-                 [ 0.4630,  0.8074],
-                 [ 0.6901, -0.2921]]], device='cuda:0')
-        """
-
-        image_data.keypoints_coords = [
-            cv2.KeyPoint(
-                int((x.item() + 1) * (image_data.image.width / 2)),
-                int((y.item() + 1) * (image_data.image.height / 2)),
-                1
-            )
-            for x, y in image_data.keypoints.squeeze(0)
-        ]
-
-        descriptions = self.descriptor.describe_keypoints(batch, image_data.keypoints)
+        descriptions = self.descriptor.describe_keypoints(batch, keypoints)
         image_data.descriptions = descriptions["descriptions"]
 
     def extract_keypoints(self, image_names):

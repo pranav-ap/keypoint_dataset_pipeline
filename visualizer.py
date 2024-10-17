@@ -24,20 +24,12 @@ class Visualizer:
         return image_vis
 
     @staticmethod
-    def show_sparse_matches(path_a, path_b, num_points=10):
-        a = ImageSoloData(path_a)
-        a.load_keypoints()
-
-        b = ImageSoloData(path_b)
-        b.load_keypoints()
-
-        pair = ImagePairData(a, b)
-        pair.load_matches()
-
-        return Visualizer.plot_matches(pair, num_points)
-
-    @staticmethod
     def plot_matches(pair: ImagePairData, num_points):
+        assert pair.a.image is not None
+        assert pair.b.image is not None
+        assert pair.left_matches_coords is not None
+        assert pair.right_matches_coords is not None
+
         num_points = len(pair.left_matches_coords) if num_points is None else min(num_points, len(pair.left_matches_coords))
         matches = [cv2.DMatch(idx, idx, 0.) for idx in range(num_points)]
 
