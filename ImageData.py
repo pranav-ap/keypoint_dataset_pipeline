@@ -1,5 +1,6 @@
-from utils.logger import logger
+from typing import List, Optional
 from config import config
+import cv2
 import os
 import torch
 import numpy as np
@@ -8,20 +9,16 @@ from pathlib import Path
 
 
 class ImageSoloData:
-    def __init__(self, image_path, resize=None):
+    def __init__(self, image_path):
         self.image_path: str = image_path
         self.image_name: str = Path(self.image_path).stem
 
-        self.image: Image.Image = Image.open(image_path)
-
-        if resize:
-            self.image = self.image.resize(resize)
-
-        W, H = self.image.size
-        self.W: int = W
-        self.H: int = H
+        image = Image.open(image_path)
+        image = image.resize(config.IMAGE_RESIZE)
+        self.image: Image.Image = image
 
         self.keypoints = None
+        self.keypoints_coords: Optional[List[cv2.KeyPoint]] = None
         self.confidences = None
         self.descriptions = None
 
@@ -34,13 +31,20 @@ class ImageSoloData:
         keypoints_filepath = os.path.join(config.npy_dir_path, filename)
         assert os.path.exists(keypoints_filepath)
         self.keypoints = np.load(keypoints_filepath)
-        logger.debug(f'LOADED self.keypoints.shape {self.keypoints.shape}')
 
         filename = f"{self.image_name}_descriptions_{config.POSTFIX_DETECTOR_MODEL}_{config.POSTFIX_DATASET}.npy"
         descriptions_filepath = os.path.join(config.npy_dir_path, filename)
         assert os.path.exists(descriptions_filepath)
         self.descriptions = np.load(descriptions_filepath)
-        logger.debug(f'LOADED self.descriptions.shape {self.descriptions.shape}')
+
+        self.keypoints_coords = [
+            cv2.KeyPoint(
+                int((x.item() + 1) * (self.image.width / 2)),
+                int((y.item() + 1) * (self.image.height / 2)),
+                1
+            )
+            for x, y in self.keypoints.squeeze(0)
+        ]
 
     def save_keypoints(self):
         assert self.keypoints is not None and self.descriptions is not None
@@ -50,11 +54,9 @@ class ImageSoloData:
 
         filename = f"{self.image_name}_keypoints_{config.POSTFIX_DETECTOR_MODEL}_{config.POSTFIX_DATASET}.npy"
         np.save(os.path.join(config.npy_dir_path, filename), keypoints_np)
-        logger.debug(f'SAVED keypoints_np.shape {keypoints_np.shape}')
 
         filename = f"{self.image_name}_descriptions_{config.POSTFIX_DETECTOR_MODEL}_{config.POSTFIX_DATASET}.npy"
         np.save(os.path.join(config.npy_dir_path, filename), descriptions_np)
-        logger.debug(f'SAVED descriptions_np.shape {descriptions_np.shape}')
 
 
 class ImagePairData:
@@ -65,6 +67,9 @@ class ImagePairData:
         self.left_matches = None
         self.right_matches = None
 
+        self.left_matches_coords: Optional[List[cv2.KeyPoint]] = None
+        self.right_matches_coords: Optional[List[cv2.KeyPoint]] = None
+
     """
     Load & Save
     """
@@ -73,12 +78,20 @@ class ImagePairData:
         filename = f"{self.a.image_name}_{self.b.image_name}_matches_{config.POSTFIX_DETECTOR_MODEL}_{config.POSTFIX_MATCHER_MODEL}_{config.POSTFIX_DATASET}.npy"
         matches_filepath = os.path.join(config.npy_dir_path, filename)
         assert os.path.exists(matches_filepath)
-
         matches = np.load(matches_filepath)
-        logger.debug(f'LOADED matches.shape {matches.shape}')
 
         self.left_matches = matches[:, :2]
         self.right_matches = matches[:, 2:]
+
+        self.left_matches_coords = [
+            cv2.KeyPoint(int(x.item()), int(y.item()), 1.)
+            for x, y in self.left_matches
+        ]
+
+        self.right_matches_coords = [
+            cv2.KeyPoint(int(x.item()), int(y.item()), 1.)
+            for x, y in self.right_matches
+        ]
 
     def save_matches(self):
         filename = f"{self.a.image_name}_{self.b.image_name}_matches_{config.POSTFIX_DETECTOR_MODEL}_{config.POSTFIX_MATCHER_MODEL}_{config.POSTFIX_DATASET}.npy"
@@ -88,6 +101,4 @@ class ImagePairData:
         right_matches_np = self.right_matches.cpu().numpy() if isinstance(self.right_matches, torch.Tensor) else self.right_matches
 
         matches = np.hstack([left_matches_np, right_matches_np])
-
         np.save(matches_filepath, matches)
-        logger.debug(f'SAVED matches.shape {matches.shape}')

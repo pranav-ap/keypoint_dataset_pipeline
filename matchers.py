@@ -1,10 +1,10 @@
 import cv2
 from config import config
 from ImageData import ImageSoloData, ImagePairData
+from visualizer import Visualizer
 import numpy as np
 import torch
-from PIL import Image
-from typing import Optional
+from typing import List, Optional
 from abc import ABC, abstractmethod
 
 
@@ -21,52 +21,8 @@ class DeDoDeMatcher(KeypointMatcher):
     def __init__(self):
         super().__init__()
 
-        config.IMAGE_RESIZE = (784, 784)
-
         from DeDoDe.matchers.dual_softmax_matcher import DualSoftMaxMatcher
         self.matcher = DualSoftMaxMatcher()
-
-    """
-    Visualization
-    """
-
-    @staticmethod
-    def show_all_matches(path_a, path_b, num_points=10):
-        a = ImageSoloData(path_a, resize=config.IMAGE_RESIZE)
-        a.load_keypoints()
-
-        b = ImageSoloData(path_b, resize=config.IMAGE_RESIZE)
-        b.load_keypoints()
-
-        pair = ImagePairData(a, b)
-        pair.load_matches()
-
-        a, b = np.array(a.image), np.array(b.image)
-
-        left_matches = [
-            cv2.KeyPoint(x, y, 1.)
-            for x, y in pair.left_matches
-        ]
-
-        right_matches = [
-            cv2.KeyPoint(x, y, 1.)
-            for x, y in pair.right_matches
-        ]
-
-        num_points = len(left_matches) if num_points is None else min(num_points, len(left_matches))
-        matches = [cv2.DMatch(idx, idx, 0.) for idx in range(num_points)]
-
-        image_vis = cv2.drawMatches(
-            a, left_matches,
-            b, right_matches,
-            matches,
-            outImg=None,
-            flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
-        )
-
-        image_vis = Image.fromarray(image_vis)
-
-        return image_vis
 
     """
     Match
@@ -77,17 +33,52 @@ class DeDoDeMatcher(KeypointMatcher):
         b: ImageSoloData = pair.b
 
         matches_A, matches_B, batch_ids = self.matcher.match(
-            torch.tensor(a.keypoints), torch.tensor(a.descriptions),
-            torch.tensor(b.keypoints), torch.tensor(b.descriptions),
+            a.keypoints, a.descriptions,
+            b.keypoints, b.descriptions,
             normalize=True,
             inv_temp=20,
             threshold=0.1
         )
 
+        """
+        > matches_A
+        tensor([[ 0.9809,  0.7462],
+                [ 0.7054,  0.7487],
+                [-0.1314,  0.5293],
+                ...,
+                [-0.2793,  0.3482],
+                [ 0.4630,  0.8074],
+                [ 0.6901, -0.2921]], device='cuda:0')
+        """
+
+        H = a.image.height
+        W = a.image.width
+
         pair.left_matches, pair.right_matches = self.matcher.to_pixel_coords(
             matches_A, matches_B,
-            a.H, a.W, b.H, b.W
+            H, W, H, W
         )
+
+        """
+        > left_matches
+        tensor([[776.5000, 684.4999],
+                [668.5000, 685.5000],
+                [340.5000, 599.5000],
+                ...,
+                [282.5000, 528.5000],
+                [573.5000, 708.5000],
+                [662.5000, 277.5000]], device='cuda:0')
+        """
+
+        pair.left_matches_coords = [
+            cv2.KeyPoint(int(x.item()), int(y.item()), 1.)
+            for x, y in pair.left_matches
+        ]
+
+        pair.right_matches_coords = [
+            cv2.KeyPoint(int(x.item()), int(y.item()), 1.)
+            for x, y in pair.right_matches
+        ]
 
     def extract_matches(self, image_names):
         a: Optional[ImageSoloData] = None
@@ -97,10 +88,10 @@ class DeDoDeMatcher(KeypointMatcher):
             path_b = f"{config.images_dir_path}/{image_names[index + 1]}"
 
             if a is None:
-                a = ImageSoloData(path_a, resize=config.IMAGE_RESIZE)
+                a = ImageSoloData(path_a)
                 a.load_keypoints()
 
-            b = ImageSoloData(path_b, resize=config.IMAGE_RESIZE)
+            b = ImageSoloData(path_b)
             b.load_keypoints()
 
             pair = ImagePairData(a, b)
@@ -119,37 +110,35 @@ class RoMaMatcher(KeypointMatcher):
         self.model = roma_outdoor(
             device=config.device,
             coarse_res=560,
-            upsample_res=(864, 1152)
+            upsample_res=config.IMAGE_RESIZE
         )
 
         self.model.symmetric = False
-        self.H, self.W = self.model.get_output_resolution()
-
-        config.IMAGE_RESIZE = (self.W, self.H)  # (1152, 864)
 
     """
     Utils
     """
 
-    def _get_corresponding_points(self, points_in_im1, warp):
-        points_in_im2 = []
+    def _get_corresponding_keypoint_coords(self, a: ImageSoloData, warp) -> List[cv2.KeyPoint]:
+        b_keypoint_coords = []
+        H, W = a.image.height, a.image.width
 
-        for pt in points_in_im1:
-            x_im1, y_im1 = pt
+        for pt in a.keypoints_coords:
+            x_a, y_a = pt.pt
+            x_a, y_a = int(x_a), int(y_a)
 
-            # Cast to integers
-            x_im1, y_im1 = int(x_im1), int(y_im1)
+            w = warp[y_a, x_a]
+            A, B = self.model.to_pixel_coordinates(w, H, W, H, W)
 
-            w = warp[y_im1, x_im1]
-            A, B = self.model.to_pixel_coordinates(w, self.H, self.W, self.H, self.W)
-            x_im2, y_im2 = B
+            x_b, y_b = B
+            x_b, y_b = int(x_b.item()), int(y_b.item())
 
-            points_in_im2.append((int(x_im2.item()), int(y_im2.item())))
+            b_keypoint_coords.append(cv2.KeyPoint(x_b, y_b, 1.))
 
-        return points_in_im2
+        return b_keypoint_coords
 
     @staticmethod
-    def _get_points_from_certainty(certainty, threshold=0.6, num_points=5):
+    def _get_points_from_certainty(certainty, threshold=0.6, num_points=5) -> List[cv2.KeyPoint]:
         certainty_cpu = certainty.cpu().numpy() if isinstance(certainty, torch.Tensor) else certainty
         # Convert certainty to a binary mask where values are above the threshold
         mask = certainty_cpu > threshold
@@ -163,7 +152,10 @@ class RoMaMatcher(KeypointMatcher):
         else:
             indices = np.arange(len(y_coords))  # Take all if not enough points
 
-        points = [(x_coords[i], y_coords[i]) for i in indices]
+        points = [
+            cv2.KeyPoint(x_coords[i], y_coords[i], 1.)
+            for i in indices
+        ]
 
         return points
 
@@ -171,45 +163,25 @@ class RoMaMatcher(KeypointMatcher):
     Visualize
     """
 
-    @staticmethod
-    def _plot_matches(pair: ImagePairData, points_in_im1, points_in_im2, num_points):
-        left_matches = [cv2.KeyPoint(int(x), int(y), 1.) for x, y in points_in_im1]
-        right_matches = [cv2.KeyPoint(int(x), int(y), 1.) for x, y in points_in_im2]
-
-        assert len(left_matches) == len(right_matches)
-
-        num_points = len(left_matches) if num_points is None else min(num_points, len(left_matches))
-        matches = [cv2.DMatch(idx, idx, 0.) for idx in range(num_points)]
-
-        a, b = np.array(pair.a.image), np.array(pair.b.image)
-
-        image_vis = cv2.drawMatches(
-            a, left_matches,
-            b, right_matches,
-            matches,
-            outImg=None,
-            flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
-        )
-
-        image_vis = Image.fromarray(image_vis)
-        return image_vis
-
     def extract_and_show_random_matches(self, path_a, path_b, confidence_threshold=0.6, num_points=5):
         """
         This function picks pixels from image 1 that have >= confidence_threshold.
         Then shows their matches from image 2
         """
 
-        a = ImageSoloData(path_a, resize=config.IMAGE_RESIZE)
-        b = ImageSoloData(path_b, resize=config.IMAGE_RESIZE)
+        a = ImageSoloData(path_a)
+        b = ImageSoloData(path_b)
         pair = ImagePairData(a, b)
 
         warp, certainty = self._match_pair(pair)
 
         points_in_im1 = self._get_points_from_certainty(certainty, confidence_threshold, num_points)
-        points_in_im2 = self._get_corresponding_points(points_in_im1, warp)
+        points_in_im2 = self._get_corresponding_keypoint_coords(a, warp)
 
-        return self._plot_matches(pair, points_in_im1, points_in_im2, num_points)
+        pair.left_matches_coords = points_in_im1
+        pair.right_matches_coords = points_in_im2
+
+        return Visualizer.plot_matches(pair, num_points)
 
     def extract_and_show_matches_from_keypoints(self, path_a, path_b, num_points=5):
         """
@@ -217,30 +189,23 @@ class RoMaMatcher(KeypointMatcher):
         Then shows their matches from image 2
         """
 
-        a = ImageSoloData(path_a, resize=config.IMAGE_RESIZE)
+        a = ImageSoloData(path_a)
         a.load_keypoints()
 
-        b = ImageSoloData(path_b, resize=config.IMAGE_RESIZE)
+        b = ImageSoloData(path_b)
         b.load_keypoints()
 
         pair = ImagePairData(a, b)
 
         warp, certainty = self._match_pair(pair)
 
-        points_in_im1 = a.keypoints.cpu().numpy() if isinstance(a.keypoints, torch.Tensor) else a.keypoints
-        points_in_im1 = points_in_im1.squeeze(0)
-        num_points = len(points_in_im1) if num_points is None else min(num_points, len(points_in_im1))
+        points_in_im1 = a.keypoints_coords
+        points_in_im2 = self._get_corresponding_keypoint_coords(a, warp)
 
-        width, height = a.image.size
+        pair.left_matches_coords = points_in_im1
+        pair.right_matches_coords = points_in_im2
 
-        points_in_im1 = [
-            ((x + 1) * (width / 2), (y + 1) * (height / 2))
-            for x, y in points_in_im1
-        ]
-
-        points_in_im2 = self._get_corresponding_points(points_in_im1, warp)
-
-        return self._plot_matches(pair, points_in_im1, points_in_im2, num_points)
+        return Visualizer.plot_matches(pair, num_points)
 
     """
     Match
@@ -263,30 +228,20 @@ class RoMaMatcher(KeypointMatcher):
             path_b = f"{config.images_dir_path}/{image_names[index + 1]}"
 
             if a is None:
-                a = ImageSoloData(path_a, resize=config.IMAGE_RESIZE)
+                a = ImageSoloData(path_a)
                 a.load_keypoints()
 
-            b = ImageSoloData(path_b, resize=config.IMAGE_RESIZE)
+            b = ImageSoloData(path_b)
             b.load_keypoints()
 
             pair = ImagePairData(a, b)
 
             warp, certainty = self._match_pair(pair)
 
-            points_in_im1 = a.keypoints.cpu().numpy() if isinstance(a.keypoints, torch.Tensor) else a.keypoints
-            points_in_im1 = points_in_im1.squeeze(0)
+            points_in_im2 = self._get_corresponding_keypoint_coords(a, warp)
 
-            width, height = a.image.size
-
-            points_in_im1 = [
-                ((x + 1) * (width / 2), (y + 1) * (height / 2))
-                for x, y in points_in_im1
-            ]
-
-            points_in_im2 = self._get_corresponding_points(points_in_im1, warp)
-
-            pair.left_matches = np.array(points_in_im1)
-            pair.right_matches = np.array(points_in_im2)
+            pair.left_matches = a.keypoints_coords
+            pair.right_matches = points_in_im2
 
             pair.save_matches()
             a = b

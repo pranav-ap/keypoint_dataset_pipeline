@@ -11,22 +11,24 @@ class DataPipeline:
 
     @staticmethod
     def config_dedode_dedode_euroc():
-        config.images_dir_path = "/kaggle/input/euroc_dataset/V1_01_easy/data"
-        config.csv_path = "/kaggle/input/euroc_dataset/V1_01_easy/data.csv"
+        config.images_dir_path = "/kaggle/input/euroc-dataset/V1_01_easy/data"
+        config.csv_path = "/kaggle/input/euroc-dataset/V1_01_easy/data.csv"
 
-        config.npy_dir_path = "/kaggle/working/euroc_dataset/npy_files"
+        config.npy_dir_path = "/kaggle/working/euroc-dataset/npy_files"
         make_clear_directory(config.npy_dir_path)
 
         config.POSTFIX_DATASET = 'euroc'
         config.POSTFIX_DETECTOR_MODEL = 'dedode'
         config.POSTFIX_MATCHER_MODEL = 'dedode'
 
+        config.IMAGE_RESIZE = (784, 784)
+
     @staticmethod
     def config_dedode_roma_euroc():
-        config.images_dir_path = "/kaggle/input/euroc_dataset/V1_01_easy/data"
-        config.csv_path = "/kaggle/input/euroc_dataset/V1_01_easy/data.csv"
+        config.images_dir_path = "/kaggle/input/euroc-dataset/V1_01_easy/data"
+        config.csv_path = "/kaggle/input/euroc-dataset/V1_01_easy/data.csv"
 
-        config.npy_dir_path = "/kaggle/working/euroc_dataset/npy_files"
+        config.npy_dir_path = "/kaggle/working/euroc-dataset/npy_files"
         make_clear_directory(config.npy_dir_path)
 
         config.POSTFIX_DATASET = 'euroc'
@@ -35,10 +37,10 @@ class DataPipeline:
 
     @staticmethod
     def config_dedode_roma_matching_samples():
-        config.images_dir_path = "/kaggle/input/matching_samples"
-        config.csv_path = "/kaggle/input/matching_samples/data.csv"
+        config.images_dir_path = "/kaggle/input/matching-samples"
+        config.csv_path = "/kaggle/input/matching-samples/data.csv"
 
-        config.npy_dir_path = "/kaggle/working/matching_samples/npy_files"
+        config.npy_dir_path = "/kaggle/working/matching-samples/npy_files"
         make_clear_directory(config.npy_dir_path)
 
         config.POSTFIX_DATASET = 'matching_samples'
@@ -62,15 +64,12 @@ class DataPipeline:
 
         detector = DeDoDeDetector()
         detector.extract_keypoints(image_names)
-        # detector.show_keypoints()
 
-        matcher = DeDoDeMatcher()
-        matcher.extract_matches(image_names)
-        # matcher.show_all_matches()
+        # matcher = DeDoDeMatcher()
+        # matcher.extract_matches(image_names)
 
         matcher = RoMaMatcher()
         matcher.extract_matches(image_names)
-        # matcher.show_random_matches()
 
 
 def main():

@@ -1,9 +1,7 @@
 import cv2
-import random
 from config import config
 from ImageData import ImageSoloData
 import numpy as np
-from PIL import Image
 import torch
 import torchvision.transforms as T
 from typing import Optional
@@ -22,8 +20,6 @@ class KeypointDetector(ABC):
 class DeDoDeDetector(KeypointDetector):
     def __init__(self):
         super().__init__()
-
-        config.IMAGE_RESIZE = (784, 784)
 
         from DeDoDe import dedode_detector_L, dedode_descriptor_G
         self.detector = dedode_detector_L(weights=None)
@@ -56,35 +52,6 @@ class DeDoDeDetector(KeypointDetector):
         return standard_im
 
     """
-    Visualization
-    """
-
-    @staticmethod
-    def show_keypoints(path_im, num_points=10):
-        im = ImageSoloData(path_im, resize=config.IMAGE_RESIZE)
-        im.load_keypoints()
-
-        width, height = im.image.size
-        image = np.array(im.image)
-
-        keypoints = [
-            cv2.KeyPoint((x + 1) * (width / 2), (y + 1) * (height / 2), 1.)
-            for x, y in im.keypoints.squeeze(0)
-        ]
-
-        num_points = len(keypoints) if num_points is None else min(num_points, len(keypoints))
-        keypoints = random.sample(keypoints, num_points)
-
-        image_vis = cv2.drawKeypoints(
-            image,
-            keypoints,
-            None
-        )
-
-        image_vis = Image.fromarray(image_vis)
-        return image_vis
-
-    """
     Detect, Describe, Match
     """
 
@@ -100,6 +67,26 @@ class DeDoDeDetector(KeypointDetector):
         image_data.keypoints = detections["keypoints"]
         image_data.confidences = detections["confidence"]
 
+        """
+        >> keypoints
+        tensor([[[ 0.9809,  0.7462],
+                 [ 0.7054,  0.7487],
+                 [-0.1314,  0.5293],
+                 ...,
+                 [-0.2793,  0.3482],
+                 [ 0.4630,  0.8074],
+                 [ 0.6901, -0.2921]]], device='cuda:0')
+        """
+
+        image_data.keypoints_coords = [
+            cv2.KeyPoint(
+                int((x.item() + 1) * (image_data.image.width / 2)),
+                int((y.item() + 1) * (image_data.image.height / 2)),
+                1
+            )
+            for x, y in image_data.keypoints.squeeze(0)
+        ]
+
         descriptions = self.descriptor.describe_keypoints(batch, image_data.keypoints)
         image_data.descriptions = descriptions["descriptions"]
 
@@ -112,10 +99,10 @@ class DeDoDeDetector(KeypointDetector):
             path_b = f"{config.images_dir_path}/{image_names[index + 1]}"
 
             if a is None:
-                a = ImageSoloData(path_a, resize=config.IMAGE_RESIZE)
+                a = ImageSoloData(path_a)
                 self._detect_describe(a)
 
-            b = ImageSoloData(path_b, resize=config.IMAGE_RESIZE)
+            b = ImageSoloData(path_b)
             self._detect_describe(b)
 
             a.save_keypoints()
