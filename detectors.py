@@ -1,5 +1,5 @@
 from config import config
-from ImageData import ImageSoloData
+from ImageData import KeypointsData
 import numpy as np
 import torch
 import torchvision.transforms as T
@@ -33,7 +33,7 @@ class DeDoDeDetector(KeypointDetector):
     Utils
     """
 
-    def _preprocess_image(self, image_data: ImageSoloData):
+    def _preprocess_image(self, image_data: KeypointsData):
         # Convert grayscale to RGB if necessary
         if image_data.image.mode != 'RGB':
             image_data.image = image_data.image.convert('RGB')
@@ -54,7 +54,7 @@ class DeDoDeDetector(KeypointDetector):
     Detect, Describe, Match
     """
 
-    def _detect_describe(self, image_data: ImageSoloData):
+    def _detect_describe(self, image_data: KeypointsData):
         """
         Returns an Image Data object that contains keypoints and descriptors
         """
@@ -73,18 +73,18 @@ class DeDoDeDetector(KeypointDetector):
         image_data.descriptions = descriptions["descriptions"]
 
     def extract_keypoints(self, image_names):
-        a: Optional[ImageSoloData] = None
-        b: Optional[ImageSoloData] = None
+        a: Optional[KeypointsData] = None
+        b: Optional[KeypointsData] = None
 
         for index in range(len(image_names) - 1):
             path_a = f"{config.images_dir_path}/{image_names[index]}"
             path_b = f"{config.images_dir_path}/{image_names[index + 1]}"
 
             if a is None:
-                a = ImageSoloData(path_a)
+                a = KeypointsData(path_a)
                 self._detect_describe(a)
 
-            b = ImageSoloData(path_b)
+            b = KeypointsData(path_b)
             self._detect_describe(b)
 
             a.save_keypoints()

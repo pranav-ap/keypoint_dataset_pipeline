@@ -1,8 +1,11 @@
 import sys
 from loguru import logger
+import warnings
 
 
 def setup_logging():
+    warnings.filterwarnings("ignore", category=UserWarning)
+
     logger.remove()  # Remove the default handler
     logger.add(
         sys.stdout,

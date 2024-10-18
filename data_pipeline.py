@@ -1,15 +1,18 @@
-from typing import List, Tuple
-
 from config import config
 from utils import get_best_device, make_clear_directory
 from detectors import DeDoDeDetector
-from matchers import DSMatcher, RoMaMatcher
+from matchers import RoMaMatcher
+from typing import List, Tuple
 import pandas as pd
 
 
 class DataPipeline:
     def __init__(self):
         config.device = get_best_device()
+
+        import sys
+        sys.path.append('D:/thesis_code/keypoint_dataset_pipeline/RoMa')
+        sys.path.append('D:/thesis_code/keypoint_dataset_pipeline/DeDoDe')
 
     @staticmethod
     def config_dedode_dedode_euroc():

@@ -1,10 +1,12 @@
-from typing import List, Optional, Tuple
 from config import config
+import random
 import cv2
 import os
 import torch
+import numpy as np
 from PIL import Image
 from pathlib import Path
+from typing import List, Optional, Tuple
 
 
 def load_tensor(filename: str) -> torch.tensor:
@@ -15,10 +17,11 @@ def load_tensor(filename: str) -> torch.tensor:
 
 
 def save_tensor(tensor: torch.tensor, filename: str):
+    assert tensor is not None
     torch.save(tensor, os.path.join(config.npy_dir_path, filename))
 
 
-class ImageSoloData:
+class KeypointsData:
     def __init__(self, image_path):
         self.image_path: str = image_path
         self.image_name: str = Path(self.image_path).stem
@@ -45,26 +48,38 @@ class ImageSoloData:
             for x, y in self.keypoints.squeeze(0)
         ]
 
+    def show_keypoints(self, num_points=None):
+        num_points = len(self.keypoints_coords) if num_points is None else min(num_points, len(self.keypoints_coords))
+        keypoints = random.sample(self.keypoints_coords, num_points)
+
+        image_vis = cv2.drawKeypoints(
+            np.array(self.image),
+            keypoints,
+            None
+        )
+
+        image_vis = Image.fromarray(image_vis)
+        return image_vis
+
     """
     Load & Save
     """
 
     def load_keypoints(self):
-        filename = f"{self.image_name}_keypoints_{config.POSTFIX_DETECTOR_MODEL}_{config.POSTFIX_DATASET}.pt"
-        keypoints = load_tensor(filename)
-        self.set_keypoints(keypoints)
+        if self.keypoints is None or self.keypoints_coords is None:
+            filename = f"{self.image_name}_keypoints_{config.POSTFIX_DETECTOR_MODEL}_{config.POSTFIX_DATASET}.pt"
+            keypoints = load_tensor(filename)
+            self.set_keypoints(keypoints)
 
-        filename = f"{self.image_name}_descriptions_{config.POSTFIX_DETECTOR_MODEL}_{config.POSTFIX_DATASET}.pt"
-        self.descriptions = load_tensor(filename)
+        if self.descriptions is None:
+            filename = f"{self.image_name}_descriptions_{config.POSTFIX_DETECTOR_MODEL}_{config.POSTFIX_DATASET}.pt"
+            self.descriptions = load_tensor(filename)
 
-        filename = f"{self.image_name}_confidences_{config.POSTFIX_DETECTOR_MODEL}_{config.POSTFIX_DATASET}.pt"
-        self.confidences = load_tensor(filename)
+        if self.confidences is None:
+            filename = f"{self.image_name}_confidences_{config.POSTFIX_DETECTOR_MODEL}_{config.POSTFIX_DATASET}.pt"
+            self.confidences = load_tensor(filename)
 
     def save_keypoints(self):
-        assert self.keypoints is not None
-        assert self.descriptions is not None
-        assert self.confidences is not None
-
         filename = f"{self.image_name}_keypoints_{config.POSTFIX_DETECTOR_MODEL}_{config.POSTFIX_DATASET}.pt"
         save_tensor(self.keypoints, filename)
 
@@ -75,17 +90,37 @@ class ImageSoloData:
         save_tensor(self.confidences, filename)
 
 
-class ImagePairData:
-    def __init__(self, a: ImageSoloData, b: ImageSoloData):
+class MatchesData:
+    def __init__(self, a: KeypointsData, b: KeypointsData):
         self.a = a
         self.b = b
 
         self.left_matches_coords: Optional[List[cv2.KeyPoint]] = None
         self.right_matches_coords: Optional[List[cv2.KeyPoint]] = None
 
+    def plot_matches(self, num_points=None):
+        assert self.a.image is not None
+        assert self.b.image is not None
+        assert self.left_matches_coords is not None
+        assert self.right_matches_coords is not None
 
-class DSM_ImagePairData(ImagePairData):
-    def __init__(self, a: ImageSoloData, b: ImageSoloData):
+        num_points = len(self.left_matches_coords) if num_points is None else min(num_points, len(self.left_matches_coords))
+        matches = [cv2.DMatch(idx, idx, 0.) for idx in range(num_points)]
+
+        image_vis = cv2.drawMatches(
+            np.array(self.a.image), self.left_matches_coords,
+            np.array(self.b.image), self.right_matches_coords,
+            matches,
+            outImg=None,
+            flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
+        )
+
+        image_vis = Image.fromarray(image_vis)
+        return image_vis
+
+
+class DSM_MatchesData(MatchesData):
+    def __init__(self, a: KeypointsData, b: KeypointsData):
         super().__init__(a, b)
 
         self.left_matches: Optional[torch.tensor] = None
@@ -110,20 +145,24 @@ class DSM_ImagePairData(ImagePairData):
     """
 
     def load_matches(self):
-        filename = f"{self.a.image_name}_{self.b.image_name}_matches_{config.POSTFIX_MATCHER_MODEL}_{config.POSTFIX_DATASET}.pt"
-        matches = load_tensor(filename)
+        if self.left_matches is None or self.left_matches_coords is None:
+            filename = f"{self.a.image_name}_{self.b.image_name}_matches_{config.POSTFIX_MATCHER_MODEL}_{config.POSTFIX_DATASET}.pt"
+            matches = load_tensor(filename)
 
-        self.set_left_matches(matches[:, :2])
-        self.set_right_matches(matches[:, 2:])
+            self.set_left_matches(matches[:, :2])
+            self.set_right_matches(matches[:, 2:])
 
     def save_matches(self):
+        assert self.left_matches is not None
+        assert self.right_matches is not None
+
         filename = f"{self.a.image_name}_{self.b.image_name}_matches_{config.POSTFIX_MATCHER_MODEL}_{config.POSTFIX_DATASET}.pt"
         matches = torch.cat([self.left_matches, self.right_matches], dim=1)
         save_tensor(matches, filename)
 
 
-class RoMa_ImagePairData(ImagePairData):
-    def __init__(self, a: ImageSoloData, b: ImageSoloData):
+class RoMa_MatchesData(MatchesData):
+    def __init__(self, a: KeypointsData, b: KeypointsData):
         super().__init__(a, b)
 
         self.warp: Optional[torch.tensor] = None
@@ -173,6 +212,19 @@ class RoMa_ImagePairData(ImagePairData):
 
         return torch.cat((warp1, warp2), dim=-1)
 
+    def calc_keypoint_matches(self, confidence_threshold=0.6):
+        left_matches_coords = self.a.keypoints_coords
+        left_matches_coords, right_matches_coords = self.get_target_keypoints(left_matches_coords, confidence_threshold)
+
+        self.set_left_matches_coords(left_matches_coords)
+        self.set_right_matches_coords(right_matches_coords)
+
+    def get_random_matches(self, confidence_threshold=0.6, num_points=5) -> Tuple[List[cv2.KeyPoint], List[cv2.KeyPoint]]:
+        left_matches_coords = self.get_random_reference_keypoints(confidence_threshold, num_points)
+        left_matches_coords, right_matches_coords = self.get_target_keypoints(left_matches_coords, confidence_threshold)
+
+        return left_matches_coords, right_matches_coords
+
     def get_random_reference_keypoints(self, confidence_threshold=0.6, num_points=5) -> List[cv2.KeyPoint]:
         assert self.certainty is not None
 
@@ -220,12 +272,14 @@ class RoMa_ImagePairData(ImagePairData):
     """
 
     def load_warp_certainty(self):
-        filename = f"{self.a.image_name}_{self.b.image_name}_warp_{config.POSTFIX_MATCHER_MODEL}_{config.POSTFIX_DATASET}.pt"
-        warp = load_tensor(filename)
-        self.set_warp(warp)
+        if self.warp is None or self.pixel_coords is None:
+            filename = f"{self.a.image_name}_{self.b.image_name}_warp_{config.POSTFIX_MATCHER_MODEL}_{config.POSTFIX_DATASET}.pt"
+            warp = load_tensor(filename)
+            self.set_warp(warp)
 
-        filename = f"{self.a.image_name}_{self.b.image_name}_certainty_{config.POSTFIX_MATCHER_MODEL}_{config.POSTFIX_DATASET}.pt"
-        self.certainty = load_tensor(filename)
+        if self.certainty is None:
+            filename = f"{self.a.image_name}_{self.b.image_name}_certainty_{config.POSTFIX_MATCHER_MODEL}_{config.POSTFIX_DATASET}.pt"
+            self.certainty = load_tensor(filename)
 
     def save_warp_certainty(self):
         filename = f"{self.a.image_name}_{self.b.image_name}_warp_{config.POSTFIX_MATCHER_MODEL}_{config.POSTFIX_DATASET}.pt"
