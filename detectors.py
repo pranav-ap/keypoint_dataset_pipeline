@@ -1,4 +1,4 @@
-from config import config
+from config import config, device
 from ImageData import KeypointsData
 import cv2
 import numpy as np
@@ -49,7 +49,7 @@ class DeDoDeDetector(KeypointDetector):
         return standard_im
 
     def _make_batch(self, image: Image.Image):
-        standard_im = self._preprocess_image(image).to(config.device)[None]
+        standard_im = self._preprocess_image(image).to(device)[None]
         batch = {"image": standard_im}
         return batch
 

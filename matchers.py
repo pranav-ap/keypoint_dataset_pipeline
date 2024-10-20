@@ -1,4 +1,4 @@
-from config import config
+from config import config, device
 from ImageData import KeypointsData, MatchesData
 from typing import Optional
 from rich.progress import Progress
@@ -10,7 +10,7 @@ class RoMaMatcher:
 
         from romatch import roma_outdoor
         self.model = roma_outdoor(
-            device=config.device,
+            device=device,
             coarse_res=560,
             upsample_res=config.image.resize
         )
@@ -37,7 +37,7 @@ class RoMaMatcher:
                 # Match using model and retrieve warp and certainty
                 warp, certainty = self.model.match(
                     a.image_path, b.image_path,
-                    device=config.device
+                    device=device
                 )
 
                 # Set warp and certainty for the match pair

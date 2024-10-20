@@ -15,3 +15,4 @@ einops
 setuptools
 scipy
 hydra-core
+rich
