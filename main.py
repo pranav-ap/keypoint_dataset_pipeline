@@ -1,4 +1,4 @@
-from utils.logger import logger
+from utils import logger
 from config import config
 from data_pipeline import DataPipeline
 

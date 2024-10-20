@@ -1,7 +1,8 @@
 ./DeDoDe
 ./Restormer
 ./RoMa
-./data/
+./INSTRUCTIONS.md
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
