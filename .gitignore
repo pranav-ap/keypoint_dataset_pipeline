@@ -1,8 +1,8 @@
 ./DeDoDe
 ./Restormer
 ./RoMa
-./INSTRUCTIONS.md
-
+INSTRUCTIONS.md
+scraps/pass.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

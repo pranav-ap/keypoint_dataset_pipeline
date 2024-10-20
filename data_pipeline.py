@@ -3,6 +3,7 @@ from detectors import DeDoDeDetector
 from matchers import RoMaMatcher
 from DataFilter import DataFilter
 import pandas as pd
+import os
 
 
 class DataPipeline:
@@ -26,11 +27,14 @@ class DataPipeline:
     def run(self):
         image_names = self.get_image_names()
 
+        os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline/DeDoDe')
         detector = DeDoDeDetector()
         detector.extract_keypoints(image_names)
 
+        os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline/RoMa')
         matcher = RoMaMatcher()
         matcher.extract_warp_certainty(image_names)
 
+        os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline/')
         data_filter = DataFilter()
         data_filter.extract_good_matches(image_names)
