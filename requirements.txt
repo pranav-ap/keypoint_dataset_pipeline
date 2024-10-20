@@ -8,8 +8,6 @@ scikit-learn
 scikit-image
 opencv-python
 loguru
-torch
-torchvision
 tqdm
 einops
 setuptools
