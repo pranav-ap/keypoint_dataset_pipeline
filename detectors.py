@@ -53,6 +53,7 @@ class DeDoDeDetector(KeypointDetector):
 
     def _make_batch(self, image: Image.Image):
         standard_im = self._preprocess_image(image).to(self.device)[None]
+
         batch = {"image": standard_im}
         return batch
 
