@@ -1,6 +1,7 @@
-from utils import logger
 from config import config
+from utils import logger
 from data_pipeline import DataPipeline
+from rich.console import Console
 
 
 def main():
@@ -14,4 +15,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception:
+        console = Console()
+        console.print_exception(show_locals=True)

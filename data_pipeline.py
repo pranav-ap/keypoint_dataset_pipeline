@@ -1,4 +1,5 @@
 from config import config
+from utils import get_best_device
 from detectors import DeDoDeDetector
 from matchers import RoMaMatcher
 from DataFilter import DataFilter
@@ -8,6 +9,8 @@ import os
 
 class DataPipeline:
     def __init__(self):
+        self.device = get_best_device()
+
         from utils import make_clear_directory
         make_clear_directory(config.paths[config.task].tensors_dir)
 
@@ -27,11 +30,11 @@ class DataPipeline:
     def run(self):
         image_names = self.get_image_names()
 
-        os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline/DeDoDe')
+        os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline/libs/DeDoDe')
         detector = DeDoDeDetector()
         detector.extract_keypoints(image_names)
 
-        os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline/RoMa')
+        os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline/libs/RoMa')
         matcher = RoMaMatcher()
         matcher.extract_warp_certainty(image_names)
 

@@ -10,31 +10,31 @@ samples:
 
 paths:
     samples:
-        images_dir: data/samples/images
-        tensors_dir: data/samples/tensors
+        images_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/samples/images
+        tensors_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/samples/tensors
     basalt:
-        images_dir: data/euroc/images
-        tensors_dir: data/euroc/tensors
-        csv: data/euroc/EuRoC_V1_01_easy_filenames.csv
+        images_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/euroc/images
+        tensors_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/euroc/tensors
+        csv: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/euroc/EuRoC_V1_01_easy_filenames.csv
 
 image:
-    resize: 882, 882
-    patch_shape: 126, 126, 3
+    resize: [512, 512] # [448, 448]
+    patch_shape: [64, 64, 3]
 
 dedode:
-    image_keypoints_count: 5_000
-    patch_keypoints_count: 10
+    image_keypoints_count: 10_000
+    patch_keypoints_count: 2000
 
     filter:
-        image_confidence_threshold: 0.7
-        patches_confidence_threshold: 0.7
+        image_confidence_threshold: 0.2
+        patches_confidence_threshold: 0.3
 
-        top_k_strategy: weighted_sampling  # sorting weighted_sampling
-        keep_top_k: 200
+        top_k_strategy: sorting  # sorting weighted_sampling
+        keep_top_k: 5_000
 
 roma:
     filter:
-        confidence_threshold: 0.7
+        confidence_threshold: 0.5
 
 dual_softmax:
     confidence_threshold: 0.1

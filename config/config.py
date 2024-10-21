@@ -1,12 +1,18 @@
-from utils import get_best_device
 import hydra
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 
-@hydra.main(version_base=None, config_path="", config_name="pipeline")
-def configure(cfg: DictConfig) -> DictConfig:
-    cfg.device = get_best_device()
-    return cfg
+config: DictConfig | None = None
 
 
-config = configure()
+def setup_config():
+    hydra.initialize(version_base=None, config_path=".")
+    cfg = hydra.compose("pipeline")
+
+    # print(OmegaConf.to_yaml(cfg))
+
+    global config
+    config = cfg
+
+
+setup_config()

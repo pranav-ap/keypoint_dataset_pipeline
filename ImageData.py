@@ -1,4 +1,5 @@
 from config import config
+from utils import logger
 import cv2
 import os
 import torch
@@ -23,6 +24,8 @@ def save_tensor(tensor: torch.tensor, filename: str):
 
 class KeypointsData:
     def __init__(self, image_name):
+        self.config = config
+
         self.image_path: str = f"{config.paths[config.task].images_dir}/{image_name}"
 
         image_name, _ = os.path.splitext(image_name)
@@ -45,7 +48,8 @@ class KeypointsData:
 
     def _init_image(self):
         image = Image.open(self.image_path)
-        image = image.resize(config.image.resize)
+        x, y = self.config.image.resize
+        image = image.resize((x, y))
         image = image.convert('RGB')
         return image
 
@@ -55,7 +59,8 @@ class KeypointsData:
         # image_np.shape (896, 896, 3) example
         image_np = np.array(self.image)
         # view.shape (7, 7, 1, 128, 128, 3)
-        view = view_as_blocks(image_np, config.image.patch_shape)
+        x, y, z = self.config.image.patch_shape
+        view = view_as_blocks(image_np, (x, y, z))
         # view.shape (7, 7, 128, 128, 3)
         view = view.squeeze()
 
@@ -81,7 +86,7 @@ class KeypointsData:
                 int((y.item() + 1) * (self.image.height / 2)),
                 1
             )
-            for x, y in self.keypoints.squeeze(0)
+            for x, y in self.keypoints
         ]
 
     def _init_keypoints_patches(self, keypoints_patches: torch.tensor):
@@ -95,7 +100,7 @@ class KeypointsData:
                 int((y.item() + 1) * (self.image.height / 2)),
                 1
             )
-            for x, y in self.keypoints_patches.squeeze(0)
+            for x, y in self.keypoints_patches
         ]
 
     """
@@ -137,6 +142,7 @@ class KeypointsData:
 
 class MatchesData:
     def __init__(self, a: KeypointsData, b: KeypointsData):
+        self.config = config
 
         self.a = a
         self.b = b
@@ -179,7 +185,7 @@ class MatchesData:
                     w1 * (warp1[..., 0] + 1) / 2,
                     h1 * (warp1[..., 1] + 1) / 2,
                 ),
-                axis=-1,
+                axis=-1
             )
         )
 
@@ -190,7 +196,7 @@ class MatchesData:
                     w2 * (warp2[..., 0] + 1) / 2,
                     h2 * (warp2[..., 1] + 1) / 2,
                 ),
-                axis=-1,
+                axis=-1
             )
         )
 
@@ -268,8 +274,19 @@ class MatchesData:
             filename = f"{self.a.image_name}_{self.b.image_name}_matches.pt"
             matches = load_tensor(filename)
 
-            self.left_matches_coords_filtered = matches[:, :2]
-            self.right_matches_coords_filtered = matches[:, 2:]
+            logger.debug(f'matches.shape {matches.shape}')
+
+            self.left_matches_coords_filtered = [
+                cv2.KeyPoint(int(x), int(y), 1.)
+                for x, y in matches[:, :2]
+            ]
+
+            self.right_matches_coords_filtered = [
+                cv2.KeyPoint(int(x), int(y), 1.)
+                for x, y in matches[:, 2:]
+            ]
+
+            logger.debug(f'len(self.left_matches_coords_filtered) {len(self.left_matches_coords_filtered)}')
 
     def save_filtered_matches(self):
         assert self.left_matches_coords_filtered is not None and self.right_matches_coords_filtered is not None

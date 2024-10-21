@@ -1,8 +1,9 @@
+from config import config
+from utils import logger
 import random
 import cv2
 import numpy as np
 from PIL import Image
-from config import config
 from ImageData import KeypointsData, MatchesData
 
 
@@ -18,6 +19,8 @@ class Painter:
     @staticmethod
     def show_keypoints(name, num_points=None):
         kd = KeypointsData(name)
+        kd.load()
+
         assert kd.keypoints_coords is not None
 
         num_points = len(kd.keypoints_coords) if num_points is None else min(num_points, len(kd.keypoints_coords))
@@ -37,6 +40,8 @@ class Painter:
     @staticmethod
     def show_patches(name, padding=2):
         kd = KeypointsData(name)
+        kd.load()
+
         assert kd.keypoints_coords is not None
 
         num_rows, num_cols = kd.grid_patches_shape
@@ -114,6 +119,7 @@ class Painter:
         assert pair.right_matches_coords_filtered is not None
 
         num_points = len(pair.left_matches_coords_filtered) if num_points is None else min(num_points, len(pair.left_matches_coords_filtered))
+        logger.debug(f'num_points {num_points}')
         matches = [cv2.DMatch(idx, idx, 0.) for idx in range(num_points)]
 
         image_vis = cv2.drawMatches(

@@ -1,4 +1,5 @@
 from config import config
+from utils import get_best_device, logger
 from ImageData import KeypointsData
 import cv2
 import numpy as np
@@ -12,7 +13,7 @@ from rich.progress import Progress
 
 class KeypointDetector(ABC):
     def __init__(self):
-        pass
+        self.device = get_best_device()
 
     @abstractmethod
     def extract_keypoints(self, image_names):
@@ -23,8 +24,10 @@ class DeDoDeDetector(KeypointDetector):
     def __init__(self):
         super().__init__()
 
+        logger.info('Loading DeDoDeDetector')
         from DeDoDe import dedode_detector_L
         self.detector = dedode_detector_L(weights=None)
+        logger.info('Loading DeDoDeDetector Done')
 
         self.normalizer = T.Normalize(
             mean=[0.485, 0.456, 0.406],
@@ -49,7 +52,7 @@ class DeDoDeDetector(KeypointDetector):
         return standard_im
 
     def _make_batch(self, image: Image.Image):
-        standard_im = self._preprocess_image(image).to(config.device)[None]
+        standard_im = self._preprocess_image(image).to(self.device)[None]
         batch = {"image": standard_im}
         return batch
 
@@ -62,6 +65,14 @@ class DeDoDeDetector(KeypointDetector):
 
         detections = self.detector.detect(batch, keypoint_count)
         keypoints, confidences = detections["keypoints"], detections["confidence"]
+
+        keypoints = keypoints.squeeze(0)
+        confidences = confidences.squeeze(0)
+
+        max_confidence = confidences.max()
+        min_confidence = confidences.min()
+
+        confidences = (confidences - min_confidence) / (max_confidence - min_confidence)
 
         return keypoints, confidences
 
@@ -87,7 +98,7 @@ class DeDoDeDetector(KeypointDetector):
         patch_height, patch_width, _ = config.image.patch_shape
         keypoints_coords: List[cv2.KeyPoint] = []
 
-        for x, y in keypoints.squeeze(0):
+        for x, y in keypoints:
             x = int((x.item() + 1) * (patch_width / 2))
             y = int((y.item() + 1) * (patch_height / 2))
 
@@ -159,3 +170,5 @@ class DeDoDeDetector(KeypointDetector):
                 kd.save()
 
                 progress.advance(task)
+
+        progress.stop()
