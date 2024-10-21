@@ -5,11 +5,13 @@ import warnings
 
 def setup_logging():
     warnings.filterwarnings("ignore", category=UserWarning)
+    warnings.filterwarnings("ignore", category=FutureWarning, module="kornia.feature.lightglue")
 
     logger.remove()  # Remove the default handler
     logger.add(
         sys.stdout,
-        format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | "
+        format="<level>{level: <8}</level> | "
+               "<cyan>{function}</cyan> | "
                "<level>{message}</level>",
         level="DEBUG"
     )
