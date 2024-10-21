@@ -9,154 +9,102 @@ from ImageData import KeypointsData, MatchesData
 
 class Painter:
     """
-    Contains Function to Display Keypoints & Matches
-    """
-
-    """
-    Keypoints
+    Contains functions to display keypoints & matches.
     """
 
     @staticmethod
-    def show_keypoints(name, num_points=None):
-        kd = KeypointsData(name)
-        kd.load()
-
-        assert kd.keypoints_coords is not None
-
-        num_points = len(kd.keypoints_coords) if num_points is None else min(num_points, len(kd.keypoints_coords))
-        keypoints = random.sample(kd.keypoints_coords, num_points)
-
-        image_vis = cv2.drawKeypoints(
-            np.array(kd.image),
-            keypoints,
-            None
-        )
-
-        image_vis = Image.fromarray(image_vis)
-        image_vis = image_vis.resize(config.image.resize)
-
-        return image_vis
+    def _resize_image(image, size):
+        return Image.fromarray(image).resize(size)
 
     @staticmethod
-    def show_patches(name, padding=2):
-        kd = KeypointsData(name)
-        kd.load()
+    def _draw_keypoints(image, keypoints_coords, num_points):
+        keypoints = random.sample(keypoints_coords, num_points)
+        return cv2.drawKeypoints(np.array(image), keypoints, None)
 
-        assert kd.keypoints_coords is not None
-
-        num_rows, num_cols = kd.grid_patches_shape
-
-        # Calculate the size of the output image
-        patch_height, patch_width = kd.grid_patches[0, 0].size
-        grid_width = num_cols * patch_width + (num_cols - 1) * padding
-        grid_height = num_rows * patch_height + (num_rows - 1) * padding
-
-        # Create a blank canvas for the grid
-        grid_image = Image.new(
-            'RGB',
-            (grid_width, grid_height),
-            color=(255, 255, 255)
+    @staticmethod
+    def _draw_matches(pair, left_coords, right_coords, num_points):
+        matches = [cv2.DMatch(idx, idx, 0.) for idx in range(num_points)]
+        return cv2.drawMatches(
+            np.array(pair.a.image), left_coords,
+            np.array(pair.b.image), right_coords,
+            matches, outImg=None,
+            flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
         )
+
+    @staticmethod
+    def show_patches(name, also_filtered=False, padding=2):
+        kd = KeypointsData.load_from_name(name, also_filtered)
+
+        num_rows, num_cols = kd.patches_shape
+        patch_height, patch_width = kd.patch_images[0, 0].size
+        grid_size = (
+            num_cols * patch_width + (num_cols - 1) * padding,
+            num_rows * patch_height + (num_rows - 1) * padding
+        )
+
+        grid_image = Image.new('RGB', grid_size, color=(255, 255, 255))
 
         for i in range(num_rows):
             for j in range(num_cols):
-                # Calculate the position to paste the patch
-                x = j * (patch_width + padding)
-                y = i * (patch_height + padding)
-
-                # Paste the patch at the calculated position
-                grid_image.paste(kd.grid_patches[i, j], (x, y))
+                x, y = j * (patch_width + padding), i * (patch_height + padding)
+                grid_image.paste(kd.patch_images[i, j], (x, y))
 
         return grid_image
 
     """
-    Matches
+    Keypoints Display Functions
     """
 
     @staticmethod
-    def show_keypoint_matches(name_a, name_b, confidence_threshold=0.6, num_points=None):
-        """
-        This function picks random keypoint pixels from image 1
-        Then shows their matches from image 2
-        """
-        pair = MatchesData.load_from_names(name_a, name_b)
+    def _show_keypoints(kd, num_points, keypoint_attr, resize_size):
+        coords = getattr(kd, keypoint_attr).as_image_coords()
+        assert coords is not None
 
-        assert pair.a.image is not None
-        assert pair.b.image is not None
+        num_points = len(coords) if num_points is None else min(num_points, len(coords))
+        image_vis = Painter._draw_keypoints(kd.image, coords, num_points)
 
-        left_matches_coords, right_matches_coords = pair.get_good_matches(
-            pair.a.keypoints_coords,
-            confidence_threshold
-        )
-
-        num_points = len(left_matches_coords) if num_points is None else min(num_points, len(left_matches_coords))
-        matches = [cv2.DMatch(idx, idx, 0.) for idx in range(num_points)]
-
-        image_vis = cv2.drawMatches(
-            np.array(pair.a.image), left_matches_coords,
-            np.array(pair.b.image), right_matches_coords,
-            matches,
-            outImg=None,
-            flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
-        )
-
-        image_vis = Image.fromarray(image_vis)
-        image_vis = image_vis.resize((pair.a.image.width * 2, pair.a.image.height))
-
-        return image_vis
+        return Painter._resize_image(image_vis, resize_size)
 
     @staticmethod
-    def show_filtered_keypoint_matches(name_a, name_b, num_points=None):
-        """
-        This function picks random keypoint pixels from image 1
-        Then shows their matches from image 2
-        """
-        pair = MatchesData.load_from_names(name_a, name_b, load_filtered_matches=True)
+    def show_keypoints(name, level='both', filtered=False, num_points=None):
+        kd = KeypointsData.load_from_name(name, also_filtered=filtered)
 
-        assert pair.a.image is not None
-        assert pair.b.image is not None
-        assert pair.left_matches_coords_filtered is not None
-        assert pair.right_matches_coords_filtered is not None
+        if level == 'image':
+            keypoint_attr = 'image_keypoints_filtered' if filtered else 'image_keypoints'
+            return Painter._show_keypoints(kd, num_points, keypoint_attr, config.image.resize)
+        elif level == 'patch':
+            keypoint_attr = 'patches_keypoints_filtered' if filtered else 'patches_keypoints'
+            return Painter._show_keypoints(kd, num_points, keypoint_attr, config.image.resize)
 
-        num_points = len(pair.left_matches_coords_filtered) if num_points is None else min(num_points, len(pair.left_matches_coords_filtered))
-        logger.debug(f'num_points {num_points}')
-        matches = [cv2.DMatch(idx, idx, 0.) for idx in range(num_points)]
+        coords = kd.get_all_coords() if not filtered else kd.get_all_filtered_coords()
+        assert coords is not None
 
-        image_vis = cv2.drawMatches(
-            np.array(pair.a.image), pair.left_matches_coords_filtered,
-            np.array(pair.b.image), pair.right_matches_coords_filtered,
-            matches,
-            outImg=None,
-            flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
-        )
+        num_points = len(coords) if num_points is None else min(num_points, len(coords))
+        image_vis = Painter._draw_keypoints(kd.image, coords, num_points)
 
-        image_vis = Image.fromarray(image_vis)
-        image_vis = image_vis.resize((pair.a.image.width * 2, pair.a.image.height))
+        return Painter._resize_image(image_vis, config.image.resize)
 
-        return image_vis
+    """
+    Matches Display Functions
+    """
 
     @staticmethod
-    def show_random_matches(name_a, name_b, confidence_threshold=0.6, num_points=None):
+    def _show_matches(pair, left_coords, right_coords, num_points):
+        image_vis = Painter._draw_matches(pair, left_coords, right_coords, num_points)
+        return Painter._resize_image(image_vis, (pair.a.image.width * 2, pair.a.image.height))
+
+    @staticmethod
+    def show_matches(name_a, name_b, confidence_threshold=0.6, num_points=None):
         pair = MatchesData.load_from_names(name_a, name_b)
+        coords = pair.a.image_keypoints.as_image_coords()
+        left_coords, right_coords = pair.get_good_matches(coords, confidence_threshold)
+        num_points = len(left_coords) if num_points is None else min(num_points, len(left_coords))
 
-        assert pair.a.image is not None
-        assert pair.b.image is not None
+        return Painter._show_matches(pair, left_coords, right_coords, num_points)
 
-        left_matches_coords = pair.get_random_reference_keypoints(confidence_threshold, num_points)
-        left_matches_coords, right_matches_coords = pair.get_good_matches(left_matches_coords, confidence_threshold)
+    @staticmethod
+    def show_filtered_matches(name_a, name_b, num_points=None):
+        pair = MatchesData.load_from_names(name_a, name_b, load_coords=True)
+        num_points = len(pair.left_coords) if num_points is None else min(num_points, len(pair.left_coords))
 
-        num_points = len(left_matches_coords) if num_points is None else min(num_points, len(left_matches_coords))
-        matches = [cv2.DMatch(idx, idx, 0.) for idx in range(num_points)]
-
-        image_vis = cv2.drawMatches(
-            np.array(pair.a.image), left_matches_coords,
-            np.array(pair.b.image), right_matches_coords,
-            matches,
-            outImg=None,
-            flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
-        )
-
-        image_vis = Image.fromarray(image_vis)
-        image_vis = image_vis.resize((pair.a.image.width * 2, pair.a.image.height))
-
-        return image_vis
+        return Painter._show_matches(pair, pair.left_coords, pair.right_coords, num_points)

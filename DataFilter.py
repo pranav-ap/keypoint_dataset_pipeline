@@ -8,53 +8,42 @@ from rich.progress import Progress
 
 
 class DataFilter:
-    def __init__(self):
-        pass
-
     @staticmethod
     def _good_image_level_keypoints(kd: KeypointsData):
-        confidence_threshold: int = config.dedode.filter.image_confidence_threshold
-        mask: torch.tensor = kd.confidences >= confidence_threshold
+        threshold: int = config.dedode.filter.image_relative_confidence_threshold
+        mask: torch.tensor = kd.image_keypoints.confidences >= threshold
 
-        confident_image_keypoints = kd.keypoints[mask]
-        confident_image_confidences = kd.confidences[mask]
+        keypoints = kd.image_keypoints.normalised[mask]
+        confidences = kd.image_keypoints.confidences[mask]
 
-        logger.debug(f'kd.confidences.shape {kd.confidences.shape}')
-        logger.debug(f'confident_image_confidences.shape {confident_image_confidences.shape}')
+        if len(keypoints) == 0:
+            return torch.empty(0)
 
-        sorted_confidence_indices = torch.argsort(confident_image_confidences, descending=True)
-
-        keep_top_k: int = config.dedode.filter.keep_top_k
-        keep_top_k = min(keep_top_k, len(sorted_confidence_indices))
-
-        top_keypoints = confident_image_keypoints[sorted_confidence_indices][:keep_top_k]
+        count = min(config.dedode.filter.max_count, len(keypoints))
+        selected_indices = torch.multinomial(confidences, count, replacement=False)
+        top_keypoints = keypoints[selected_indices]
 
         return top_keypoints
 
     @staticmethod
     def _good_patches_level_keypoints(kd: KeypointsData):
-        confidence_threshold: int = config.dedode.filter.patches_confidence_threshold
-        mask: torch.tensor = kd.confidences_patches >= confidence_threshold
+        threshold: int = config.dedode.filter.patches_relative_confidence_threshold
+        mask: torch.tensor = kd.patches_keypoints.confidences >= threshold
 
-        if any(mask):
-            confident_patches_keypoints = kd.keypoints_patches[mask]
+        top_keypoints = kd.patches_keypoints.normalised[mask]
 
-            logger.debug(f'kd.keypoints_patches.shape {kd.keypoints_patches.shape}')
-            logger.debug(f'confident_patches_keypoints.shape {confident_patches_keypoints.shape}')
+        if len(top_keypoints) == 0:
+            return torch.empty(0)
 
-            return confident_patches_keypoints
-
-        return kd.keypoints_patches
+        return top_keypoints
 
     def _good_keypoints(self, kd: KeypointsData):
         keypoints_image_level = self._good_image_level_keypoints(kd)
-        logger.info(f'keypoints_image_level.shape : {keypoints_image_level.shape}')
         keypoints_patches_level = self._good_patches_level_keypoints(kd)
-        logger.info(f'keypoints_patches_level.shape : {keypoints_patches_level.shape}')
 
         keypoints = torch.cat([keypoints_image_level, keypoints_patches_level], dim=0)
 
-        keypoints_coords = [
+        coords = [
             cv2.KeyPoint(
                 int((x.item() + 1) * (kd.image.width / 2)),
                 int((y.item() + 1) * (kd.image.height / 2)),
@@ -63,25 +52,24 @@ class DataFilter:
             for x, y in keypoints
         ]
 
-        logger.info(f'Good Keypoints : {len(keypoints_coords)}')
+        logger.info(f'Good Keypoints : {len(coords)}')
 
-        return keypoints_coords
+        return coords
 
     @staticmethod
     def _good_matches(pair: MatchesData, reference_keypoints_coords):
-        confidence_threshold = config.roma.filter.confidence_threshold
+        threshold = config.roma.filter.confidence_threshold
 
-        left_matches_coords, right_matches_coords = pair.get_good_matches(
+        left_coords, right_coords = pair.get_good_matches(
             reference_keypoints_coords,
-            confidence_threshold
+            threshold
         )
 
-        assert len(left_matches_coords) == len(right_matches_coords)
+        assert len(left_coords) == len(right_coords)
+        logger.info(f'Good Matches : {len(right_coords)}')
 
-        logger.info(f'Good Matches : {len(right_matches_coords)}')
-
-        pair.left_matches_coords_filtered = left_matches_coords
-        pair.right_matches_coords_filtered = right_matches_coords
+        pair.left_coords = left_coords
+        pair.right_coords = right_coords
 
 
     def extract_good_matches(self, image_names):
@@ -94,7 +82,7 @@ class DataFilter:
             a: Optional[KeypointsData] = None
             top_keypoints = None
 
-            for name_a, name_b in zip(image_names, image_names[1:]):
+            for index, (name_a, name_b) in enumerate(zip(image_names, image_names[1:])):
                 if a is None:
                     a = KeypointsData(name_a)
                     a.load()
@@ -110,12 +98,13 @@ class DataFilter:
 
                 # Filter good matches based on top keypoints
                 self._good_matches(pair, top_keypoints)
-                pair.save_filtered_matches()
+                pair.save_coords()
 
                 # Update for next iteration
-                top_keypoints = self._good_keypoints(b)
-                a = b
+                if index < len(image_names) - 2:
+                    top_keypoints = self._good_keypoints(b)
 
+                a = b
                 progress.advance(task)
 
             progress.stop()

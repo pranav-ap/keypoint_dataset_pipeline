@@ -1,1 +1,1 @@
-from .config import config, device
+from .config import config

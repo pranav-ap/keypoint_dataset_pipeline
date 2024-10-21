@@ -19,22 +19,22 @@ paths:
 
 image:
     resize: [512, 512] # [448, 448]
-    patch_shape: [64, 64, 3]
+    patch_shape: [64, 64]
 
 dedode:
     image_keypoints_count: 10_000
     patch_keypoints_count: 2000
 
     filter:
-        image_confidence_threshold: 0.2
-        patches_confidence_threshold: 0.3
+        image_relative_confidence_threshold: 0.2
+        patches_relative_confidence_threshold: 0.3
 
-        top_k_strategy: sorting  # sorting weighted_sampling
-        keep_top_k: 5_000
+        choosing_strategy: weighted_sampling  # sorting weighted_sampling
+        max_count: 5_000
 
 roma:
     filter:
-        confidence_threshold: 0.5
+        confidence_threshold: 0.5  # absolute confidence
 
 dual_softmax:
     confidence_threshold: 0.1

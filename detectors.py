@@ -1,13 +1,11 @@
 from config import config
 from utils import get_best_device, logger
 from ImageData import KeypointsData
-import cv2
 import numpy as np
 from PIL import Image
 import torch
 import torchvision.transforms as T
 from abc import ABC, abstractmethod
-from typing import List
 from rich.progress import Progress
 
 
@@ -57,6 +55,26 @@ class DeDoDeDetector(KeypointDetector):
         batch = {"image": standard_im}
         return batch
 
+    @staticmethod
+    def _is_cell_empty(row, col, keypoints_coords) -> bool:
+        patch_height, patch_width = config.image.patch_shape
+
+        # Define the bounds of the cell
+        x_min = row * patch_width
+        x_max = (row + 1) * patch_width
+        y_min = col * patch_height
+        y_max = (col + 1) * patch_height
+
+        # Check if any point falls inside this cell
+        for kp in keypoints_coords:
+            x, y = kp.pt
+            if x_min <= x < x_max and y_min <= y < y_max:
+                # Cell is not empty, a point is inside
+                return False
+
+        # No points found, cell is empty
+        return True
+
     """
     Detect, Describe, Match
     """
@@ -79,82 +97,35 @@ class DeDoDeDetector(KeypointDetector):
 
     def _image_detect(self, kd: KeypointsData):
         keypoint_count = config.dedode.image_keypoints_count
+        keypoints, confidences = self._detect(kd.image, keypoint_count)
 
-        keypoints, confidences = self._detect(
-            kd.image,
-            keypoint_count
-        )
-
-        kd.init_keypoints(keypoints)
-        kd.confidences = confidences
-
-    def _patch_detect(self, image: Image.Image, row, col):
-        keypoint_count = config.dedode.patch_keypoints_count
-
-        keypoints, confidences = self._detect(
-            image,
-            keypoint_count
-        )
-
-        patch_height, patch_width, _ = config.image.patch_shape
-        keypoints_coords: List[cv2.KeyPoint] = []
-
-        for x, y in keypoints:
-            x = int((x.item() + 1) * (patch_width / 2))
-            y = int((y.item() + 1) * (patch_height / 2))
-
-            global_x = x + row * patch_width
-            global_y = y + col * patch_height
-
-            kp = cv2.KeyPoint(global_x, global_y, 1)
-
-            keypoints_coords.append(kp)
-
-        return keypoints, keypoints_coords, confidences
-
-    @staticmethod
-    def _is_cell_empty(row, col, keypoints_coords) -> bool:
-        patch_height, patch_width, _ = config.image.patch_shape
-
-        # Define the bounds of the cell
-        x_min = row * patch_width
-        x_max = (row + 1) * patch_width
-        y_min = col * patch_height
-        y_max = (col + 1) * patch_height
-
-        # Check if any point falls inside this cell
-        for kp in keypoints_coords:
-            x, y = kp.pt
-            if x_min <= x < x_max and y_min <= y < y_max:
-                # Cell is not empty, a point is inside
-                return False
-
-        # No points found, cell is empty
-        return True
+        kd.image_keypoints.normalised = keypoints
+        kd.image_keypoints.confidences = confidences
 
     def _patches_detect(self, kd: KeypointsData):
         keypoints_patches = []
-        keypoints_coords_patches = []
         confidences_patches = []
+        which_patch = []
 
-        num_rows, num_cols = kd.grid_patches_shape
+        num_rows, num_cols = kd.patches_shape
+        keypoint_count = config.dedode.patch_keypoints_count
+        image_coords = kd.image_keypoints.as_image_coords()
 
         for i in range(num_rows):
             for j in range(num_cols):
-                if not self._is_cell_empty(i, j, kd.keypoints_coords):
+                if not self._is_cell_empty(i, j, image_coords):
                     continue
 
-                patch = kd.grid_patches[(i, j)]
-                package = self._patch_detect(patch, i, j)
-                keypoints, keypoints_coords, confidences = package
+                image = kd.patch_images[(i, j)]
+                keypoints, confidences = self._detect(image, keypoint_count)
 
                 keypoints_patches.append(keypoints)
-                keypoints_coords_patches.extend(keypoints_coords)
                 confidences_patches.append(confidences)
+                which_patch.append((i, j))
 
-        kd.keypoints_patches = torch.cat(keypoints_patches, dim=0)
-        kd.keypoints_patches_coords = keypoints_coords_patches
-        kd.confidences_patches = torch.cat(confidences_patches, dim=0)
+        kd.patches_keypoints.normalised = torch.cat(keypoints_patches, dim=0)
+        kd.patches_keypoints.confidences = torch.cat(confidences_patches, dim=0)
+        kd.patches_keypoints.which_patch = which_patch
 
     def extract_keypoints(self, image_names):
         with Progress() as progress:
