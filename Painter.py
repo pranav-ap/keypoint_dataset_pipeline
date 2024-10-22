@@ -4,7 +4,7 @@ import random
 import cv2
 import numpy as np
 from PIL import Image
-from ImageData import KeypointsData, MatchesData
+from ImageData import Keypoints, Matches
 
 
 class Painter:
@@ -33,9 +33,10 @@ class Painter:
 
     @staticmethod
     def show_patches(name, padding=2):
-        kd = KeypointsData.load_from_name(name)
+        kd = Keypoints.load_from_name(name)
 
         num_rows, num_cols = kd.patches_shape
+        logger.info(f'num_rows, num_cols : {num_rows, num_cols}')
         patch_height, patch_width = kd.patch_images[0, 0].size
         grid_size = (
             num_cols * patch_width + (num_cols - 1) * padding,
@@ -61,13 +62,14 @@ class Painter:
         assert coords is not None
 
         num_points = len(coords) if num_points is None else min(num_points, len(coords))
+        logger.info(f'Number of Keypoints {num_points}')
         image_vis = Painter._draw_keypoints(kd.image, coords, num_points)
 
         return Painter._resize_image(image_vis, resize_size)
 
     @staticmethod
     def show_keypoints(name, level='both', filtered=False, num_points=None):
-        kd = KeypointsData.load_from_name(name, is_filtered=filtered)
+        kd = Keypoints.load_from_name(name, is_filtered=filtered)
 
         if level == 'image':
             keypoint_attr = 'image_keypoints_filtered' if filtered else 'image_keypoints'
@@ -80,6 +82,8 @@ class Painter:
         assert coords is not None
 
         num_points = len(coords) if num_points is None else min(num_points, len(coords))
+        logger.info(f'Number of Keypoints {num_points}')
+
         image_vis = Painter._draw_keypoints(kd.image, coords, num_points)
 
         return Painter._resize_image(image_vis, config.image.image_shape)
@@ -95,16 +99,18 @@ class Painter:
 
     @staticmethod
     def show_matches(name_a, name_b, confidence_threshold=0.6, num_points=None):
-        pair = MatchesData.load_from_names(name_a, name_b)
+        pair = Matches.load_from_names(name_a, name_b)
         coords = pair.a.image_keypoints.as_image_coords()
         left_coords, right_coords = pair.get_good_matches(coords, confidence_threshold)
         num_points = len(left_coords) if num_points is None else min(num_points, len(left_coords))
+        logger.info(f'Number of Matches {num_points}')
 
         return Painter._show_matches(pair, left_coords, right_coords, num_points)
 
     @staticmethod
     def show_filtered_matches(name_a, name_b, num_points=None):
-        pair = MatchesData.load_from_names(name_a, name_b, load_coords=True)
+        pair = Matches.load_from_names(name_a, name_b, load_coords=True)
         num_points = len(pair.left_coords) if num_points is None else min(num_points, len(pair.left_coords))
+        logger.info(f'Number of Matches {num_points}')
 
         return Painter._show_matches(pair, pair.left_coords, pair.right_coords, num_points)

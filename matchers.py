@@ -1,6 +1,6 @@
 from config import config
 from utils import get_best_device, logger
-from ImageData import KeypointsData, MatchesData
+from ImageData import Keypoints, Matches
 from typing import Optional
 from rich.progress import Progress
 
@@ -29,14 +29,14 @@ class RoMaMatcher:
                 total=len(image_names) - 1
             )
 
-            a: Optional[KeypointsData] = None
+            a: Optional[Keypoints] = None
 
             for name_a, name_b in zip(image_names, image_names[1:]):
                 if a is None:
-                    a = KeypointsData(name_a)
+                    a = Keypoints(name_a)
                     a.load()
 
-                b = KeypointsData(name_b)
+                b = Keypoints(name_b)
                 b.load()
 
                 # Match using model and retrieve warp and certainty
@@ -46,7 +46,7 @@ class RoMaMatcher:
                 )
 
                 # Set warp and certainty for the match pair
-                pair = MatchesData(a, b)
+                pair = Matches(a, b)
                 pair.set_warp(warp)
                 pair.certainty = certainty
                 pair.save()

@@ -117,7 +117,7 @@ class PatchesKeypoints(_Keypoints):
         save_tensor(which_patch, filename)
 
 
-class KeypointsData:
+class Keypoints:
     def __init__(self, image_name, is_filtered=False):
         self.is_filtered = is_filtered
 
@@ -170,7 +170,7 @@ class KeypointsData:
 
     @staticmethod
     def load_from_name(image_name, is_filtered=False):
-        kd = KeypointsData(image_name, is_filtered)
+        kd = Keypoints(image_name, is_filtered)
         kd.load()
         return kd
 
@@ -178,15 +178,26 @@ class KeypointsData:
     Getters
     """
 
+    @staticmethod
+    def _get_unique_coords(keypoints1: List[cv2.KeyPoint], keypoints2: List[cv2.KeyPoint]) -> List[cv2.KeyPoint]:
+        coords = keypoints1 + keypoints2
+        unique_coords = []
+        seen = set()  # To store the unique (x, y) tuples
+
+        for kp in coords:
+            if kp.pt not in seen:
+                seen.add(kp.pt)
+                unique_coords.append(kp)
+
+        return unique_coords
+
     def get_all_coords(self):
         assert self.image_keypoints
         x: List[cv2.KeyPoint] = self.image_keypoints.as_image_coords()
         assert self.patches_keypoints
         y: List[cv2.KeyPoint] = self.patches_keypoints.as_image_coords()
 
-        coords = x + y
-
-        return coords
+        return self._get_unique_coords(x, y)
 
     def get_all_filtered_coords(self):
         assert self.image_keypoints_filtered
@@ -194,9 +205,7 @@ class KeypointsData:
         assert self.patches_keypoints_filtered
         y: List[cv2.KeyPoint] = self.patches_keypoints_filtered.as_image_coords()
 
-        coords = x + y
-
-        return coords
+        return self._get_unique_coords(x, y)
 
     """
     Load & Save
@@ -224,8 +233,8 @@ MATCHES
 """
 
 
-class MatchesData:
-    def __init__(self, a: KeypointsData, b: KeypointsData):
+class Matches:
+    def __init__(self, a: Keypoints, b: Keypoints):
         self.a = a
         self.b = b
 
@@ -238,13 +247,13 @@ class MatchesData:
 
     @staticmethod
     def load_from_names(name_a, name_b, load_coords=False):
-        a = KeypointsData(name_a)
+        a = Keypoints(name_a)
         a.load()
 
-        b = KeypointsData(name_b)
+        b = Keypoints(name_b)
         b.load()
 
-        pair = MatchesData(a, b)
+        pair = Matches(a, b)
         pair.load()
 
         if load_coords:

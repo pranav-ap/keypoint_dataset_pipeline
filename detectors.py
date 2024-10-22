@@ -1,12 +1,33 @@
 from config import config
 from utils import get_best_device, logger
-from ImageData import KeypointsData
+from ImageData import Keypoints
 import numpy as np
 from PIL import Image
 import torch
 import torchvision.transforms as T
 from abc import ABC, abstractmethod
 from rich.progress import Progress
+
+
+def get_confidence_distribution(confidences):
+    # Define the bins (0.0 to 1.0 with step of 0.1)
+    bins = torch.arange(0, 1.1, 0.1).to(get_best_device())  # From 0 to 1 inclusive, with step 0.1
+
+    # Digitize: find the index of the bin for each confidence value
+    bin_indices = torch.bucketize(confidences, bins, right=True) - 1
+
+    # Create an empty count tensor to hold the count of each bin
+    counts = torch.zeros(len(bins) - 1, dtype=torch.int32)
+
+    # Count the occurrences of each bin index
+    for idx in bin_indices:
+        if 0 <= idx < len(counts):
+            counts[idx] += 1
+
+    # Create a dictionary to map each bin range to its count
+    distribution = {f"{bins[i]:.1f} - {bins[i+1]:.1f}": counts[i].item() for i in range(len(counts))}
+
+    return distribution
 
 
 class KeypointDetector(ABC):
@@ -88,21 +109,23 @@ class DeDoDeDetector(KeypointDetector):
         keypoints = keypoints.squeeze(0)
         confidences = confidences.squeeze(0)
 
-        max_confidence = confidences.max()
-        min_confidence = confidences.min()
+        # confidence_distribution = get_confidence_distribution(torch.tensor(confidences))
 
+        max_confidence, min_confidence = confidences.max(), confidences.min()
         confidences = (confidences - min_confidence) / (max_confidence - min_confidence)
+
+        # confidence_distribution = get_confidence_distribution(confidences)
 
         return keypoints, confidences
 
-    def _image_detect(self, kd: KeypointsData):
+    def _image_detect(self, kd: Keypoints):
         keypoint_count = config.dedode.image_keypoints_count
         keypoints, confidences = self._detect(kd.image, keypoint_count)
 
         kd.image_keypoints.normalised = keypoints
         kd.image_keypoints.confidences = confidences
 
-    def _patches_detect(self, kd: KeypointsData):
+    def _patches_detect(self, kd: Keypoints):
         keypoints_patches = []
         confidences_patches = []
         which_patch = []
@@ -135,7 +158,7 @@ class DeDoDeDetector(KeypointDetector):
             )
 
             for name in image_names:
-                kd = KeypointsData(name)
+                kd = Keypoints(name)
 
                 self._image_detect(kd)
                 self._patches_detect(kd)

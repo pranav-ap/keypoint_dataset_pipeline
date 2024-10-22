@@ -22,15 +22,13 @@ image:
     patch_shape: [64, 64]
 
 dedode:
-    image_keypoints_count: 5_000
+    image_keypoints_count: 1_000
     patch_keypoints_count: 5_00
 
     filter:
-        image_relative_confidence_threshold: 0.4
-        patches_relative_confidence_threshold: 0.2
-
-        choosing_strategy: weighted_sampling  # sorting weighted_sampling
-        max_count: 1_000
+        # weighted_sampling
+        image_level_max_count: 500
+        patch_level_max_count: 50
 
 roma:
     filter:
