@@ -19,7 +19,7 @@ source "$MINICONDA_DIR"/bin/conda init
 conda init --all
 
 # Create and activate the conda environment
-conda create -n kd_pipeline -y python=3.13
+conda create -n kd_pipeline -y python=3.12
 conda activate kd_pipeline
 
 # Install requirements from requirements.txt
