@@ -3,6 +3,7 @@ from utils import get_best_device, logger
 from ImageData import Keypoints, Matches
 from typing import Optional
 from rich.progress import Progress
+from tqdm import tqdm
 
 
 class RoMaMatcher:
@@ -23,37 +24,35 @@ class RoMaMatcher:
         logger.info('Loading RoMaMatcher Done')
 
     def extract_warp_certainty(self, image_names):
-        with Progress() as progress:
-            task = progress.add_task(
-                "[cyan]Extracting warps...",
-                total=len(image_names) - 1
+        # with Progress() as progress:
+        #     task = progress.add_task(
+        #         "[cyan]Extracting warps...",
+        #         total=len(image_names) - 1
+        #     )
+
+        a: Optional[Keypoints] = None
+
+        for name_a, name_b in tqdm(zip(image_names, image_names[1:]), desc="Extracting warps", ncols=100, total=len(image_names) - 1):
+            # logger.info(f'Matcher {name_a, name_b}')
+
+            if a is None:
+                a = Keypoints.load_from_name(name_a)
+
+            b = Keypoints.load_from_name(name_b)
+
+            # Match using model and retrieve warp and certainty
+            warp, certainty = self.model.match(
+                a.image_path, b.image_path,
+                device=self.device
             )
 
-            a: Optional[Keypoints] = None
+            # Set warp and certainty for the match pair
+            pair = Matches(a, b)
+            pair.set_warp(warp)
+            pair.certainty = certainty
+            pair.save()
 
-            for name_a, name_b in zip(image_names, image_names[1:]):
-                if a is None:
-                    a = Keypoints(name_a)
-                    a.load()
+            # Move forward
+            a = b
 
-                b = Keypoints(name_b)
-                b.load()
-
-                # Match using model and retrieve warp and certainty
-                warp, certainty = self.model.match(
-                    a.image_path, b.image_path,
-                    device=self.device
-                )
-
-                # Set warp and certainty for the match pair
-                pair = Matches(a, b)
-                pair.set_warp(warp)
-                pair.certainty = certainty
-                pair.save()
-
-                # Move forward
-                a = b
-
-                progress.advance(task)
-
-            progress.stop()
+            # progress.advance(task)

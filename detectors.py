@@ -7,6 +7,7 @@ import torch
 import torchvision.transforms as T
 from abc import ABC, abstractmethod
 from rich.progress import Progress
+from tqdm import tqdm
 
 
 def get_confidence_distribution(confidences):
@@ -146,24 +147,22 @@ class DeDoDeDetector(KeypointDetector):
                 confidences_patches.append(confidences)
                 which_patch.append((i, j))
 
-        kd.patches_keypoints.normalised = torch.cat(keypoints_patches, dim=0)
-        kd.patches_keypoints.confidences = torch.cat(confidences_patches, dim=0)
+        kd.patches_keypoints.normalised = torch.empty(0) if len(keypoints_patches) == 0 else torch.cat(keypoints_patches, dim=0)
+        kd.patches_keypoints.confidences = torch.empty(0) if len(confidences_patches) == 0 else torch.cat(confidences_patches, dim=0)
         kd.patches_keypoints.which_patch = which_patch
 
     def extract_keypoints(self, image_names):
-        with Progress() as progress:
-            task = progress.add_task(
-                "[cyan]Extracting keypoints...",
-                total=len(image_names)
-            )
+        # with Progress() as progress:
+        #     task = progress.add_task(
+        #         "[cyan]Extracting keypoints...",
+        #         total=len(image_names)
+        #     )
 
-            for name in image_names:
-                kd = Keypoints(name)
+        for name in tqdm(image_names, desc="Extracting keypoints", ncols=100):
+            # logger.info(f'Detector {name}')
 
-                self._image_detect(kd)
-                self._patches_detect(kd)
-                kd.save()
+            kd = Keypoints(name)
 
-                progress.advance(task)
-
-        progress.stop()
+            self._image_detect(kd)
+            self._patches_detect(kd)
+            kd.save()

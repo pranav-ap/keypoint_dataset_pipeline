@@ -16,10 +16,10 @@ class DataPipeline:
 
     @staticmethod
     def get_image_names(count=None):
-        if config.task == 'samples':
+        if config.task == 'samples' or config.task == 'basalt_samples':
             return [config.samples.reference, config.samples.target]
 
-        df = pd.read_csv(config.paths[config.task].csv_path)
+        df = pd.read_csv(config.paths[config.task].csv)
         image_names = df['filename'].tolist()
 
         if count is not None:

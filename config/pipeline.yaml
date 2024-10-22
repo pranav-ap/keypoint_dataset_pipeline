@@ -2,18 +2,21 @@ components:
     detector: dedode
     matcher: roma
 
-task: samples  # samples basalt
+task: basalt  # samples basalt basalt_samples
 
 samples:
-    reference: sacre_coeur_A.jpg
-    target: sacre_coeur_B.jpg
+    reference: 1403715273612143104.png  # sacre_coeur_A.jpg
+    target: 1403715275012143104.png  # sacre_coeur_B.jpg
 
 paths:
     samples:
         images_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/samples/images
         tensors_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/samples/tensors
+    basalt_samples:
+        images_dir: /home/stud/ath/ath_ws/datasets/euroc/V1_01_easy/mav0/cam0/data
+        tensors_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/euroc/tensors
     basalt:
-        images_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/euroc/images
+        images_dir: /home/stud/ath/ath_ws/datasets/euroc/V1_01_easy/mav0/cam0/data
         tensors_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/euroc/tensors
         csv: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/euroc/EuRoC_V1_01_easy_filenames.csv
 
@@ -23,13 +26,12 @@ image:
 
 dedode:
     image_keypoints_count: 1_000
-    patch_keypoints_count: 5_00
+    patch_keypoints_count: 200
 
     filter:
-        # weighted_sampling
-        image_level_max_count: 500
-        patch_level_max_count: 50
+        sample_count: 300
 
 roma:
     filter:
-        confidence_threshold: 0.5  # absolute confidence
+        # keep matches over the absolute confidence threshold
+        confidence_threshold: 0.5

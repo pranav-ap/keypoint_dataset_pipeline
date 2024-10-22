@@ -44,6 +44,9 @@ class ImageKeypoints(_Keypoints):
     def as_image_coords(self) -> List[cv2.KeyPoint]:
         w, h = config.image.image_shape
 
+        if self.normalised is None:
+            return []
+
         coords = [
             cv2.KeyPoint(
                 int((x.item() + 1) * (w / 2)),
@@ -63,17 +66,19 @@ class ImageKeypoints(_Keypoints):
         self.confidences = load_tensor(filename)
 
     def save(self):
-        filename = f"{self.image_name}_keypoints_normalised.pt" if not self.is_filtered else f"{self.image_name}_keypoints_normalised_filtered.pt"
-        save_tensor(self.normalised, filename)
+        if self.normalised is not None:
+            filename = f"{self.image_name}_keypoints_normalised.pt" if not self.is_filtered else f"{self.image_name}_keypoints_normalised_filtered.pt"
+            save_tensor(self.normalised, filename)
 
-        filename = f"{self.image_name}_confidences.pt" if not self.is_filtered else f"{self.image_name}_confidences_filtered.pt"
-        save_tensor(self.confidences, filename)
+        if self.confidences is not None:
+            filename = f"{self.image_name}_confidences.pt" if not self.is_filtered else f"{self.image_name}_confidences_filtered.pt"
+            save_tensor(self.confidences, filename)
 
 
 class PatchesKeypoints(_Keypoints):
     def __init__(self, image_name, is_filtered=False):
         super().__init__(image_name, is_filtered)
-        self.which_patch: List[Tuple[int, int]] = []
+        self.which_patch: Optional[List[Tuple[int, int]]] = None
 
     def as_image_coords(self) -> List[cv2.KeyPoint]:
         patch_height, patch_width = config.image.patch_shape
@@ -101,20 +106,21 @@ class PatchesKeypoints(_Keypoints):
         filename = f"{self.image_name}_which_patch.pt" if not self.is_filtered else f"{self.image_name}_which_patch_filtered.pt"
         which_patch_tensor = load_tensor(filename)
         which_patch = [(int(x), int(y)) for x, y in which_patch_tensor]
-
         self.which_patch = which_patch
 
     def save(self):
-        filename = f"{self.image_name}_keypoints_normalised_patches.pt" if not self.is_filtered else f"{self.image_name}_keypoints_normalised_patches_filtered.pt"
-        save_tensor(self.normalised, filename)
+        if self.normalised is not None:
+            filename = f"{self.image_name}_keypoints_normalised_patches.pt" if not self.is_filtered else f"{self.image_name}_keypoints_normalised_patches_filtered.pt"
+            save_tensor(self.normalised, filename)
 
-        filename = f"{self.image_name}_confidences_patches.pt" if not self.is_filtered else f"{self.image_name}_confidences_patches_filtered.pt"
-        save_tensor(self.confidences, filename)
+        if self.confidences is not None:
+            filename = f"{self.image_name}_confidences_patches.pt" if not self.is_filtered else f"{self.image_name}_confidences_patches_filtered.pt"
+            save_tensor(self.confidences, filename)
 
-        filename = f"{self.image_name}_which_patch.pt" if not self.is_filtered else f"{self.image_name}_which_patch_filtered.pt"
-
-        which_patch = torch.tensor(self.which_patch)
-        save_tensor(which_patch, filename)
+        if self.which_patch is not None:
+            filename = f"{self.image_name}_which_patch.pt" if not self.is_filtered else f"{self.image_name}_which_patch_filtered.pt"
+            which_patch = torch.tensor(self.which_patch)
+            save_tensor(which_patch, filename)
 
 
 class Keypoints:
@@ -247,11 +253,8 @@ class Matches:
 
     @staticmethod
     def load_from_names(name_a, name_b, load_coords=False):
-        a = Keypoints(name_a)
-        a.load()
-
-        b = Keypoints(name_b)
-        b.load()
+        a = Keypoints.load_from_name(name_a)
+        b = Keypoints.load_from_name(name_b)
 
         pair = Matches(a, b)
         pair.load()
