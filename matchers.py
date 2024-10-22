@@ -16,7 +16,7 @@ class RoMaMatcher:
         self.model = roma_outdoor(
             device=self.device,
             coarse_res=560,
-            upsample_res=config.image.resize
+            upsample_res=config.image.image_shape
         )
 
         self.model.symmetric = False

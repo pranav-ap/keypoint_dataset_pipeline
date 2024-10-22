@@ -18,26 +18,20 @@ paths:
         csv: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/euroc/EuRoC_V1_01_easy_filenames.csv
 
 image:
-    resize: [512, 512] # [448, 448]
+    image_shape: [512, 512] # [448, 448]
     patch_shape: [64, 64]
 
 dedode:
-    image_keypoints_count: 10_000
-    patch_keypoints_count: 2000
+    image_keypoints_count: 5_000
+    patch_keypoints_count: 5_00
 
     filter:
-        image_relative_confidence_threshold: 0.2
-        patches_relative_confidence_threshold: 0.3
+        image_relative_confidence_threshold: 0.4
+        patches_relative_confidence_threshold: 0.2
 
         choosing_strategy: weighted_sampling  # sorting weighted_sampling
-        max_count: 5_000
+        max_count: 1_000
 
 roma:
     filter:
         confidence_threshold: 0.5  # absolute confidence
-
-dual_softmax:
-    confidence_threshold: 0.1
-    inv_temp: 20
-
-device: 'cpu'

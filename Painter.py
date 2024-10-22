@@ -32,8 +32,8 @@ class Painter:
         )
 
     @staticmethod
-    def show_patches(name, also_filtered=False, padding=2):
-        kd = KeypointsData.load_from_name(name, also_filtered)
+    def show_patches(name, padding=2):
+        kd = KeypointsData.load_from_name(name)
 
         num_rows, num_cols = kd.patches_shape
         patch_height, patch_width = kd.patch_images[0, 0].size
@@ -67,14 +67,14 @@ class Painter:
 
     @staticmethod
     def show_keypoints(name, level='both', filtered=False, num_points=None):
-        kd = KeypointsData.load_from_name(name, also_filtered=filtered)
+        kd = KeypointsData.load_from_name(name, is_filtered=filtered)
 
         if level == 'image':
             keypoint_attr = 'image_keypoints_filtered' if filtered else 'image_keypoints'
-            return Painter._show_keypoints(kd, num_points, keypoint_attr, config.image.resize)
+            return Painter._show_keypoints(kd, num_points, keypoint_attr, config.image.image_shape)
         elif level == 'patch':
             keypoint_attr = 'patches_keypoints_filtered' if filtered else 'patches_keypoints'
-            return Painter._show_keypoints(kd, num_points, keypoint_attr, config.image.resize)
+            return Painter._show_keypoints(kd, num_points, keypoint_attr, config.image.image_shape)
 
         coords = kd.get_all_coords() if not filtered else kd.get_all_filtered_coords()
         assert coords is not None
@@ -82,7 +82,7 @@ class Painter:
         num_points = len(coords) if num_points is None else min(num_points, len(coords))
         image_vis = Painter._draw_keypoints(kd.image, coords, num_points)
 
-        return Painter._resize_image(image_vis, config.image.resize)
+        return Painter._resize_image(image_vis, config.image.image_shape)
 
     """
     Matches Display Functions

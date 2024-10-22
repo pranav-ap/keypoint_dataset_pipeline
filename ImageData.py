@@ -42,7 +42,7 @@ class ImageKeypoints(_Keypoints):
         super().__init__(image_name, is_filtered)
 
     def as_image_coords(self) -> List[cv2.KeyPoint]:
-        w, h = config.image.resize
+        w, h = config.image.image_shape
 
         coords = [
             cv2.KeyPoint(
@@ -73,7 +73,7 @@ class ImageKeypoints(_Keypoints):
 class PatchesKeypoints(_Keypoints):
     def __init__(self, image_name, is_filtered=False):
         super().__init__(image_name, is_filtered)
-        self.which_patch: Optional[List[Tuple[int, int]]] = None
+        self.which_patch: List[Tuple[int, int]] = []
 
     def as_image_coords(self) -> List[cv2.KeyPoint]:
         patch_height, patch_width = config.image.patch_shape
@@ -99,8 +99,10 @@ class PatchesKeypoints(_Keypoints):
         self.confidences = load_tensor(filename)
 
         filename = f"{self.image_name}_which_patch.pt" if not self.is_filtered else f"{self.image_name}_which_patch_filtered.pt"
-        self.which_patch = load_tensor(filename)
-        self.which_patch = [(int(x), int(y)) for x, y in self.which_patch]
+        which_patch_tensor = load_tensor(filename)
+        which_patch = [(int(x), int(y)) for x, y in which_patch_tensor]
+
+        self.which_patch = which_patch
 
     def save(self):
         filename = f"{self.image_name}_keypoints_normalised_patches.pt" if not self.is_filtered else f"{self.image_name}_keypoints_normalised_patches_filtered.pt"
@@ -110,12 +112,14 @@ class PatchesKeypoints(_Keypoints):
         save_tensor(self.confidences, filename)
 
         filename = f"{self.image_name}_which_patch.pt" if not self.is_filtered else f"{self.image_name}_which_patch_filtered.pt"
-        save_tensor(torch.tensor(self.which_patch), filename)
+
+        which_patch = torch.tensor(self.which_patch)
+        save_tensor(which_patch, filename)
 
 
 class KeypointsData:
-    def __init__(self, image_name, also_filtered=False):
-        self.also_filtered = also_filtered
+    def __init__(self, image_name, is_filtered=False):
+        self.is_filtered = is_filtered
 
         self.image_path: str = f"{config.paths[config.task].images_dir}/{image_name}"
         self.image: Image.Image = self._init_image()
@@ -126,21 +130,17 @@ class KeypointsData:
         self.patch_images: Dict[Tuple[int, int], Image.Image] = patch_images
         self.patches_shape: Tuple[int, int] = patches_shape
 
-        self.image_keypoints = ImageKeypoints(image_name)
-        self.patches_keypoints = PatchesKeypoints(image_name)
+        self.image_keypoints = ImageKeypoints(image_name, is_filtered=False)
+        self.patches_keypoints = PatchesKeypoints(image_name, is_filtered=False)
 
-        self.image_keypoints_filtered = None
-        self.patches_keypoints_filtered = None
-
-        if also_filtered:
-            self.image_keypoints_filtered = ImageKeypoints(image_name, is_filtered=True)
-            self.patches_keypoints_filtered = PatchesKeypoints(image_name, is_filtered=True)
+        self.image_keypoints_filtered = ImageKeypoints(image_name, is_filtered=True)
+        self.patches_keypoints_filtered = PatchesKeypoints(image_name, is_filtered=True)
 
     def _init_image(self):
         assert os.path.exists(self.image_path)
 
         image = Image.open(self.image_path)
-        x, y = config.image.resize
+        x, y = config.image.image_shape
         image = image.resize((x, y))
         image = image.convert('RGB')
 
@@ -169,8 +169,8 @@ class KeypointsData:
         return grid_patches, grid_patches_shape
 
     @staticmethod
-    def load_from_name(image_name, also_filtered=False):
-        kd = KeypointsData(image_name, also_filtered)
+    def load_from_name(image_name, is_filtered=False):
+        kd = KeypointsData(image_name, is_filtered)
         kd.load()
         return kd
 
@@ -206,7 +206,7 @@ class KeypointsData:
         self.image_keypoints.load()
         self.patches_keypoints.load()
 
-        if self.also_filtered:
+        if self.is_filtered:
             self.image_keypoints_filtered.load()
             self.patches_keypoints_filtered.load()
 
@@ -214,7 +214,7 @@ class KeypointsData:
         self.image_keypoints.save()
         self.patches_keypoints.save()
 
-        if self.also_filtered:
+        if self.is_filtered:
             self.image_keypoints_filtered.save()
             self.patches_keypoints_filtered.save()
 
