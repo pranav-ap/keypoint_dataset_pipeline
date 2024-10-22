@@ -6,7 +6,6 @@ from PIL import Image
 import torch
 import torchvision.transforms as T
 from abc import ABC, abstractmethod
-from rich.progress import Progress
 from tqdm import tqdm
 
 
@@ -152,12 +151,6 @@ class DeDoDeDetector(KeypointDetector):
         kd.patches_keypoints.which_patch = which_patch
 
     def extract_keypoints(self, image_names):
-        # with Progress() as progress:
-        #     task = progress.add_task(
-        #         "[cyan]Extracting keypoints...",
-        #         total=len(image_names)
-        #     )
-
         for name in tqdm(image_names, desc="Extracting keypoints", ncols=100):
             # logger.info(f'Detector {name}')
 

@@ -17,7 +17,7 @@ paths:
         tensors_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/euroc/tensors
     basalt:
         images_dir: /home/stud/ath/ath_ws/datasets/euroc/V1_01_easy/mav0/cam0/data
-        tensors_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/euroc/tensors
+        tensors_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/euroc/tensors2
         csv: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/euroc/EuRoC_V1_01_easy_filenames.csv
 
 image:
