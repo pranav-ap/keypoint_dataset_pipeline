@@ -91,8 +91,7 @@ class DataFilter:
             pair.save_coords()
 
             # Update for next iteration
-            if index < len(image_names) - 2:
-                top_keypoints = self._filter_keypoints(b)
+            top_keypoints = self._filter_keypoints(b)
 
             a = b
 

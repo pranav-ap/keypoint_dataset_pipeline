@@ -50,9 +50,10 @@ class DataPipeline:
         data_filter = DataFilter()
         data_filter.extract_good_matches(image_names)
 
-        if config.task.consider_samples:
+        if not config.task.consider_samples:
             folder_to_zip = config.paths[config.task.name].tensors_dir
-            output_zip_file = f'{config.paths[config.task.name].zip_dir}/matches.zip'
+            zipdir = config.paths[config.task.name].zip_dir
+            output_zip_file = f'{zipdir}/matches.zip'
             wild = '_matches.pt'
 
             make_clear_directory(config.paths[config.task.name].zip_dir)

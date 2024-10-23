@@ -4,9 +4,9 @@ components:
 
 task:
     name: basalt  # samples basalt
-    consider_samples: False
+    consider_samples: True
     track: V1_01_easy
-    limit_count: 0
+    limit_count: 10
 
 samples:
     samples:
@@ -36,7 +36,7 @@ image:
 dedode:
     batch_size: 6
     image_keypoints_count: 1_000
-    patch_keypoints_count: 10
+    patch_keypoints_count: 100
 
     filter:
         # weighted sampling
