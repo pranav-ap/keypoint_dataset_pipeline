@@ -11,7 +11,7 @@ from abc import ABC
 
 
 def load_tensor(filename: str) -> torch.tensor:
-    filepath: str = os.path.join(config.paths[config.task].tensors_dir, filename)
+    filepath: str = os.path.join(config.paths[config.task.name].tensors_dir, filename)
     assert os.path.exists(filepath)
     tensor: torch.tensor = torch.load(filepath, weights_only=True)
     return tensor
@@ -19,7 +19,7 @@ def load_tensor(filename: str) -> torch.tensor:
 
 def save_tensor(tensor: torch.tensor, filename: str):
     assert tensor is not None
-    filepath = os.path.join(config.paths[config.task].tensors_dir, filename)
+    filepath = os.path.join(config.paths[config.task.name].tensors_dir, filename)
     torch.save(tensor, filepath)
 
 
@@ -66,13 +66,11 @@ class ImageKeypoints(_Keypoints):
         self.confidences = load_tensor(filename)
 
     def save(self):
-        if self.normalised is not None:
-            filename = f"{self.image_name}_keypoints_normalised.pt" if not self.is_filtered else f"{self.image_name}_keypoints_normalised_filtered.pt"
-            save_tensor(self.normalised, filename)
+        filename = f"{self.image_name}_keypoints_normalised.pt" if not self.is_filtered else f"{self.image_name}_keypoints_normalised_filtered.pt"
+        save_tensor(self.normalised, filename)
 
-        if self.confidences is not None:
-            filename = f"{self.image_name}_confidences.pt" if not self.is_filtered else f"{self.image_name}_confidences_filtered.pt"
-            save_tensor(self.confidences, filename)
+        filename = f"{self.image_name}_confidences.pt" if not self.is_filtered else f"{self.image_name}_confidences_filtered.pt"
+        save_tensor(self.confidences, filename)
 
 
 class PatchesKeypoints(_Keypoints):
@@ -109,25 +107,22 @@ class PatchesKeypoints(_Keypoints):
         self.which_patch = which_patch
 
     def save(self):
-        if self.normalised is not None:
-            filename = f"{self.image_name}_keypoints_normalised_patches.pt" if not self.is_filtered else f"{self.image_name}_keypoints_normalised_patches_filtered.pt"
-            save_tensor(self.normalised, filename)
+        filename = f"{self.image_name}_keypoints_normalised_patches.pt" if not self.is_filtered else f"{self.image_name}_keypoints_normalised_patches_filtered.pt"
+        save_tensor(self.normalised, filename)
 
-        if self.confidences is not None:
-            filename = f"{self.image_name}_confidences_patches.pt" if not self.is_filtered else f"{self.image_name}_confidences_patches_filtered.pt"
-            save_tensor(self.confidences, filename)
+        filename = f"{self.image_name}_confidences_patches.pt" if not self.is_filtered else f"{self.image_name}_confidences_patches_filtered.pt"
+        save_tensor(self.confidences, filename)
 
-        if self.which_patch is not None:
-            filename = f"{self.image_name}_which_patch.pt" if not self.is_filtered else f"{self.image_name}_which_patch_filtered.pt"
-            which_patch = torch.tensor(self.which_patch)
-            save_tensor(which_patch, filename)
+        filename = f"{self.image_name}_which_patch.pt" if not self.is_filtered else f"{self.image_name}_which_patch_filtered.pt"
+        which_patch = torch.tensor(self.which_patch)
+        save_tensor(which_patch, filename)
 
 
 class Keypoints:
     def __init__(self, image_name, is_filtered=False):
         self.is_filtered = is_filtered
 
-        self.image_path: str = f"{config.paths[config.task].images_dir}/{image_name}"
+        self.image_path: str = f"{config.paths[config.task.name].images_dir}/{image_name}"
         self.image: Image.Image = self._init_image()
         image_name, _ = os.path.splitext(image_name)
         self.image_name: str = image_name

@@ -3,7 +3,6 @@ from utils import logger
 from typing import Optional
 import torch
 from ImageData import Keypoints, Matches
-from rich.progress import Progress
 from tqdm import tqdm
 
 
@@ -69,12 +68,6 @@ class DataFilter:
         pair.right_coords = right_coords
 
     def extract_good_matches(self, image_names):
-        # with Progress() as progress:
-        #     task = progress.add_task(
-        #         "[red]Extracting matches...",
-        #         total=len(image_names) - 1
-        #     )
-
         a: Optional[Keypoints] = None
         top_keypoints = None
 
@@ -102,5 +95,4 @@ class DataFilter:
                 top_keypoints = self._filter_keypoints(b)
 
             a = b
-            # progress.advance(task)
 

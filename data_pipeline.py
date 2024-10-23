@@ -1,5 +1,5 @@
 from config import config
-from utils import get_best_device
+from utils import get_best_device, zip_folder, logger, make_clear_directory
 from detectors import DeDoDeDetector
 from matchers import RoMaMatcher
 from DataFilter import DataFilter
@@ -10,24 +10,32 @@ import os
 class DataPipeline:
     def __init__(self):
         self.device = get_best_device()
-
-        from utils import make_clear_directory
-        make_clear_directory(config.paths[config.task].tensors_dir)
+        make_clear_directory(config.paths[config.task.name].tensors_dir)
 
     @staticmethod
-    def get_image_names(count=None):
-        if config.task == 'samples' or config.task == 'basalt_samples':
-            return [config.samples.reference, config.samples.target]
+    def get_image_names():
+        if config.task.consider_samples:
+            return [
+                config.samples[config.task.name].reference,
+                config.samples[config.task.name].target
+            ]
 
-        df = pd.read_csv(config.paths[config.task].csv)
+        df = pd.read_csv(config.paths[config.task.name].csv)
         image_names = df['filename'].tolist()
 
-        if count is not None:
+        if config.task.limit_count != 0:
+            count = config.task.limit_count
             image_names = image_names[:count]
 
         return image_names
 
     def run(self):
+        logger.info(f'Keypoint Data Pipeline')
+        logger.info(f'Task      : {config.task.name}')
+        logger.info(f'Detector  : {config.components.detector}')
+        logger.info(f'Matcher   : {config.components.matcher}')
+        logger.info(f'Device    : {get_best_device()}')
+
         image_names = self.get_image_names()
 
         os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline/libs/DeDoDe')
@@ -38,6 +46,14 @@ class DataPipeline:
         matcher = RoMaMatcher()
         matcher.extract_warp_certainty(image_names)
 
-        os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline/')
+        os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline')
         data_filter = DataFilter()
         data_filter.extract_good_matches(image_names)
+
+        if config.task.consider_samples:
+            folder_to_zip = config.paths[config.task.name].tensors_dir
+            output_zip_file = f'{config.paths[config.task.name].zip_dir}/matches.zip'
+            wild = '_matches.pt'
+
+            make_clear_directory(config.paths[config.task.name].zip_dir)
+            zip_folder(folder_to_zip, output_zip_file, wild)

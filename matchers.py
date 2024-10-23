@@ -2,7 +2,6 @@ from config import config
 from utils import get_best_device, logger
 from ImageData import Keypoints, Matches
 from typing import Optional
-from rich.progress import Progress
 from tqdm import tqdm
 
 
@@ -24,12 +23,6 @@ class RoMaMatcher:
         logger.info('Loading RoMaMatcher Done')
 
     def extract_warp_certainty(self, image_names):
-        # with Progress() as progress:
-        #     task = progress.add_task(
-        #         "[cyan]Extracting warps...",
-        #         total=len(image_names) - 1
-        #     )
-
         a: Optional[Keypoints] = None
 
         for name_a, name_b in tqdm(zip(image_names, image_names[1:]), desc="Extracting warps", ncols=100, total=len(image_names) - 1):
@@ -54,5 +47,3 @@ class RoMaMatcher:
 
             # Move forward
             a = b
-
-            # progress.advance(task)

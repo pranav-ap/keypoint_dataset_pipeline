@@ -2,23 +2,32 @@ components:
     detector: dedode
     matcher: roma
 
-task: basalt_samples  # samples basalt basalt_samples
+task:
+    name: basalt  # samples
+    consider_samples: False
+    track: V1_01_easy
+    limit_count: 0
 
 samples:
-    reference: 1403715303212143104.png  # 1403715273612143104.png sacre_coeur_A.jpg
-    target: 1403715303712143104.png  # 1403715275012143104.png  sacre_coeur_B.jpg
+    samples:
+        reference: sacre_coeur_A.jpg
+        target: sacre_coeur_B.jpg
+    basalt:
+        reference: 1403715273612143104.png
+        target: 1403715273962142976.png
 
 paths:
+    ws_root: /home/stud/ath/ath_ws
+    project_root: ${paths.ws_root}/keypoint_dataset_pipeline
+
     samples:
-        images_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/samples/images
-        tensors_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/samples/tensors
-    basalt_samples:
-        images_dir: /home/stud/ath/ath_ws/datasets/euroc/V1_01_easy/mav0/cam0/data
-        tensors_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/euroc/tensors
+        images_dir: ${paths.project_root}/data/samples/images
+        tensors_dir: ${paths.project_root}/data/samples/tensors
     basalt:
-        images_dir: /home/stud/ath/ath_ws/datasets/euroc/V1_01_easy/mav0/cam0/data
-        tensors_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/euroc/tensors2
-        csv: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/euroc/EuRoC_V1_01_easy_filenames.csv
+        csv: ${paths.project_root}/data/basalt/EuRoC_V1_01_easy_filenames.csv
+        images_dir: ${paths.ws_root}/datasets/euroc/${task.track}/mav0/cam0/data
+        tensors_dir: ${paths.ws_root}/tensors/${task.name}/${task.track}
+        zip_dir: ${paths.project_root}/zips/${task.name}/${task.track}
 
 image:
     image_shape: [512, 512]  # [576, 384] [448, 448]
@@ -29,9 +38,10 @@ dedode:
     patch_keypoints_count: 200
 
     filter:
+        # weighted sampling
         sample_count: 300
 
 roma:
     filter:
         # keep matches over the absolute confidence threshold
-        confidence_threshold: 0.5
+        confidence_threshold: 0.6
