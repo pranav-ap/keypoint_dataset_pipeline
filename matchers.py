@@ -3,6 +3,7 @@ from utils import get_best_device, logger
 from ImageData import Keypoints, Matches
 from typing import Optional
 from tqdm import tqdm
+import time
 
 
 class RoMaMatcher:
@@ -15,23 +16,24 @@ class RoMaMatcher:
         from romatch import roma_outdoor
         self.model = roma_outdoor(
             device=self.device,
-            coarse_res=560,
             upsample_res=config.image.image_shape
         )
 
         self.model.symmetric = False
+        self.model.eval()
         logger.info('Loading RoMaMatcher Done')
 
     def extract_warp_certainty(self, image_names):
+        start_time = time.time()
         a: Optional[Keypoints] = None
 
         for name_a, name_b in tqdm(zip(image_names, image_names[1:]), desc="Extracting warps", ncols=100, total=len(image_names) - 1):
             # logger.info(f'Matcher {name_a, name_b}')
 
             if a is None:
-                a = Keypoints.load_from_name(name_a)
+                a = Keypoints(name_a)
 
-            b = Keypoints.load_from_name(name_b)
+            b = Keypoints(name_b)
 
             # Match using model and retrieve warp and certainty
             warp, certainty = self.model.match(
@@ -47,3 +49,11 @@ class RoMaMatcher:
 
             # Move forward
             a = b
+
+        end_time = time.time()
+        duration = end_time - start_time
+
+        hours, remainder = divmod(duration, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        logger.info(f"Time taken: {int(hours)}h {int(minutes)}m {seconds:.2f}s")

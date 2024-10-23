@@ -1,5 +1,5 @@
 from config import config
-from utils import logger
+from utils import logger, get_best_device
 import cv2
 import os
 import torch
@@ -29,12 +29,14 @@ KEYPOINTS
 
 
 class _Keypoints(ABC):
+    device = get_best_device()
+
     def __init__(self, image_name, is_filtered):
         self.image_name: str = image_name
         self.is_filtered: bool = is_filtered
 
-        self.normalised: Optional[torch.tensor] = None
-        self.confidences: Optional[torch.tensor] = None
+        self.normalised: torch.Tensor = torch.empty(0, device=self.device)
+        self.confidences: torch.Tensor = torch.empty(0, device=self.device)
 
 
 class ImageKeypoints(_Keypoints):
@@ -44,7 +46,7 @@ class ImageKeypoints(_Keypoints):
     def as_image_coords(self) -> List[cv2.KeyPoint]:
         w, h = config.image.image_shape
 
-        if self.normalised is None:
+        if self.normalised.numel() == 0:
             return []
 
         coords = [
@@ -76,7 +78,7 @@ class ImageKeypoints(_Keypoints):
 class PatchesKeypoints(_Keypoints):
     def __init__(self, image_name, is_filtered=False):
         super().__init__(image_name, is_filtered)
-        self.which_patch: Optional[List[Tuple[int, int]]] = None
+        self.which_patch: List[Tuple[int, int]] = []
 
     def as_image_coords(self) -> List[cv2.KeyPoint]:
         patch_height, patch_width = config.image.patch_shape

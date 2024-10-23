@@ -1,5 +1,4 @@
 from data_pipeline import DataPipeline
-from rich.console import Console
 
 
 def main():
@@ -8,8 +7,4 @@ def main():
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except Exception:
-        console = Console()
-        console.print_exception(show_locals=True)
+    main()

@@ -3,7 +3,7 @@ components:
     matcher: roma
 
 task:
-    name: basalt  # samples
+    name: basalt  # samples basalt
     consider_samples: False
     track: V1_01_easy
     limit_count: 0
@@ -30,12 +30,13 @@ paths:
         zip_dir: ${paths.project_root}/zips/${task.name}/${task.track}
 
 image:
-    image_shape: [512, 512]  # [576, 384] [448, 448]
-    patch_shape: [64, 64]
+    image_shape: [504, 504]
+    patch_shape: [84, 84]
 
 dedode:
+    batch_size: 6
     image_keypoints_count: 1_000
-    patch_keypoints_count: 200
+    patch_keypoints_count: 10
 
     filter:
         # weighted sampling

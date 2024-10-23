@@ -3,6 +3,13 @@ import zipfile
 import shutil
 import torch
 from PIL import Image
+from itertools import islice
+
+
+def chunk_iterable(iterable, chunk_size):
+    iterator = iter(iterable)
+    for first in iterator:
+        yield [first] + list(islice(iterator, chunk_size - 1))
 
 
 def get_best_device(verbose=False):
