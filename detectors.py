@@ -86,7 +86,7 @@ class DeDoDeDetector(KeypointDetector):
 
             for i in range(num_rows):
                 for j in range(num_cols):
-                    if self._is_cell_empty(i, j, image_coords):
+                    if not self._is_cell_empty(i, j, image_coords):
                         continue
 
                     images.append(kd.patch_images[(i, j)])
