@@ -184,6 +184,7 @@ class Keypoints:
     @staticmethod
     def _get_unique_coords(keypoints1: List[cv2.KeyPoint], keypoints2: List[cv2.KeyPoint]) -> List[cv2.KeyPoint]:
         coords = keypoints1 + keypoints2
+
         unique_coords = []
         seen = set()  # To store the unique (x, y) tuples
 

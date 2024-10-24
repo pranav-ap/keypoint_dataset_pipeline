@@ -63,7 +63,7 @@ class DeDoDeDetector(KeypointDetector):
 
     def _initialize_keypoints(self, kd):
         if kd.image_keypoints.normalised is None:
-            kd.image_keypoints.normalised = torch.empty(0, 2, device=self.device)
+            kd.image_keypoints.normalised = torch.empty(0, device=self.device)
         if kd.image_keypoints.confidences is None:
             kd.image_keypoints.confidences = torch.empty(0, device=self.device)
 
@@ -97,16 +97,17 @@ class DeDoDeDetector(KeypointDetector):
         keypoints, confidences = self._detect(images, keypoint_count)
 
         for kd, wp, keys, confs in zip(which_image, which_patch, keypoints, confidences):
-            if kd.patches_keypoints.normalised is None:
-                kd.patches_keypoints.normalised = torch.empty(0, device=self.device)
-            if kd.patches_keypoints.confidences is None:
-                kd.patches_keypoints.confidences = torch.empty(0, device=self.device)
-            if kd.patches_keypoints.which_patch is None:
-                kd.patches_keypoints.which_patch = []
+            if kd.patches_keypoints.normalised.numel() == 0:
+                kd.patches_keypoints.normalised = keys
+            else:
+                kd.patches_keypoints.normalised = torch.cat([kd.patches_keypoints.normalised, keys], dim=0)
 
-            kd.patches_keypoints.normalised = torch.cat([kd.patches_keypoints.normalised, keys], dim=0)
-            kd.patches_keypoints.confidences = torch.cat([kd.patches_keypoints.confidences, confs], dim=0)
-            kd.patches_keypoints.which_patch.append(wp)
+            if kd.patches_keypoints.confidences.numel() == 0:
+                kd.patches_keypoints.confidences = confs
+            else:
+                kd.patches_keypoints.confidences = torch.cat([kd.patches_keypoints.confidences, confs], dim=0)
+
+            kd.patches_keypoints.which_patch.extend([wp] * keys.shape[0])
 
     def extract_keypoints(self, image_names):
         start_time = time.time()
