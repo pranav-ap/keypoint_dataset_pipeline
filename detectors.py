@@ -97,16 +97,8 @@ class DeDoDeDetector(KeypointDetector):
         keypoints, confidences = self._detect(images, keypoint_count)
 
         for kd, wp, keys, confs in zip(which_image, which_patch, keypoints, confidences):
-            if kd.patches_keypoints.normalised.numel() == 0:
-                kd.patches_keypoints.normalised = keys
-            else:
-                kd.patches_keypoints.normalised = torch.cat([kd.patches_keypoints.normalised, keys], dim=0)
-
-            if kd.patches_keypoints.confidences.numel() == 0:
-                kd.patches_keypoints.confidences = confs
-            else:
-                kd.patches_keypoints.confidences = torch.cat([kd.patches_keypoints.confidences, confs], dim=0)
-
+            kd.patches_keypoints.normalised = torch.cat([kd.patches_keypoints.normalised, keys], dim=0) if kd.patches_keypoints.normalised.numel() > 0 else keys
+            kd.patches_keypoints.confidences = torch.cat([kd.patches_keypoints.confidences, confs], dim=0) if kd.patches_keypoints.confidences.numel() > 0 else confs
             kd.patches_keypoints.which_patch.extend([wp] * keys.shape[0])
 
     def extract_keypoints(self, image_names):
