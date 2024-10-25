@@ -33,3 +33,8 @@ python --version
 pip list
 ```
 
+## Local Storage
+
+```commandline
+cd /storage/local/pranav
+```

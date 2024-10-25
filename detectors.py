@@ -42,7 +42,8 @@ class DeDoDeDetector(KeypointDetector):
         else:
             standard_im = np.transpose(standard_im, (2, 0, 1))  # (3, H, W)
 
-        return self.normalizer(torch.from_numpy(standard_im)).float()
+        x = torch.from_numpy(standard_im).float().to(self.device)
+        return self.normalizer(x)
 
     @staticmethod
     def _is_cell_empty(row, col, keypoints_coords) -> bool:
@@ -61,19 +62,12 @@ class DeDoDeDetector(KeypointDetector):
 
         return detections["keypoints"], detections["confidence"]
 
-    def _initialize_keypoints(self, kd):
-        if kd.image_keypoints.normalised is None:
-            kd.image_keypoints.normalised = torch.empty(0, device=self.device)
-        if kd.image_keypoints.confidences is None:
-            kd.image_keypoints.confidences = torch.empty(0, device=self.device)
-
     def _images_detect(self, kds: List[Keypoints]):
         keypoint_count = config.dedode.image_keypoints_count
         images = [kd.image for kd in kds]
         keypoints_batch, confidences_batch = self._detect(images, keypoint_count)
 
         for kd, keypoints, confidences in zip(kds, keypoints_batch, confidences_batch):
-            self._initialize_keypoints(kd)
             kd.image_keypoints.normalised = keypoints
             kd.image_keypoints.confidences = confidences
 
