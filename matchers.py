@@ -27,7 +27,7 @@ class RoMaMatcher:
 
         for name_a, name_b in tqdm(zip(image_names, image_names[1:]), desc="Extracting warps", ncols=100, total=len(image_names) - 1):
             # logger.info(f'Matcher {name_a, name_b}')
-            start_time = time.time()
+            # start_time = time.time()
 
             if a is None:
                 a = Keypoints(name_a)
@@ -49,10 +49,10 @@ class RoMaMatcher:
             # Move forward
             a = b
 
-            end_time = time.time()
-            duration = end_time - start_time
+            # end_time = time.time()
+            # duration = end_time - start_time
 
-            hours, remainder = divmod(duration, 3600)
-            minutes, seconds = divmod(remainder, 60)
+            # hours, remainder = divmod(duration, 3600)
+            # minutes, seconds = divmod(remainder, 60)
 
-            logger.info(f"Time taken : {int(hours)}h {int(minutes)}m {seconds:.2f}s")
+            # logger.info(f"Time taken : {int(hours)}h {int(minutes)}m {seconds:.2f}s")

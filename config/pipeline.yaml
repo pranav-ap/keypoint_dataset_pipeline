@@ -4,9 +4,9 @@ components:
 
 task:
     name: basalt  # samples basalt
-    consider_samples: True
-    track: V1_01_easy
-    limit_count: 10
+    consider_samples: False
+    track: vicon_room1/V1_02_medium
+    limit_count: 0
 
 samples:
     samples:
