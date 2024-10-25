@@ -3,6 +3,7 @@ from utils import get_best_device, zip_folder, logger, make_clear_directory
 from detectors import DeDoDeDetector
 from matchers import RoMaMatcher
 from DataFilter import DataFilter
+from omegaconf import OmegaConf
 import pandas as pd
 import os
 
@@ -58,3 +59,6 @@ class DataPipeline:
 
             make_clear_directory(config.paths[config.task.name].zip_dir)
             zip_folder(folder_to_zip, output_zip_file, wild)
+
+            config_filename = f'{zipdir}/current_config.yaml'
+            OmegaConf.save(config, config_filename)

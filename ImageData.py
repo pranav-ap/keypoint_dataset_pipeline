@@ -135,9 +135,7 @@ class Keypoints:
 
         self.image_keypoints = ImageKeypoints(image_name, is_filtered=False)
         self.patches_keypoints = PatchesKeypoints(image_name, is_filtered=False)
-
         self.image_keypoints_filtered = ImageKeypoints(image_name, is_filtered=True)
-        self.patches_keypoints_filtered = PatchesKeypoints(image_name, is_filtered=True)
 
     def _init_image(self):
         assert os.path.exists(self.image_path)
@@ -186,7 +184,7 @@ class Keypoints:
         coords = keypoints1 + keypoints2
 
         unique_coords = []
-        seen = set()  # To store the unique (x, y) tuples
+        seen = set()
 
         for kp in coords:
             if kp.pt not in seen:
@@ -206,8 +204,8 @@ class Keypoints:
     def get_all_filtered_coords(self):
         assert self.image_keypoints_filtered
         x: List[cv2.KeyPoint] = self.image_keypoints_filtered.as_image_coords()
-        assert self.patches_keypoints_filtered
-        y: List[cv2.KeyPoint] = self.patches_keypoints_filtered.as_image_coords()
+        assert self.patches_keypoints
+        y: List[cv2.KeyPoint] = self.patches_keypoints.as_image_coords()
 
         return self._get_unique_coords(x, y)
 
@@ -221,7 +219,6 @@ class Keypoints:
 
         if self.is_filtered:
             self.image_keypoints_filtered.load()
-            self.patches_keypoints_filtered.load()
 
     def save(self):
         self.image_keypoints.save()
@@ -229,7 +226,6 @@ class Keypoints:
 
         if self.is_filtered:
             self.image_keypoints_filtered.save()
-            self.patches_keypoints_filtered.save()
 
 
 """

@@ -25,25 +25,9 @@ class DataFilter:
         kd.image_keypoints_filtered.normalised = top_keypoints
         kd.image_keypoints_filtered.confidences = top_confidences
 
-    @staticmethod
-    def _filter_patches_level_keypoints(kd: Keypoints):
-        top_keypoints = kd.patches_keypoints.normalised
-        top_confidences = kd.patches_keypoints.confidences
-        which_patches = kd.patches_keypoints.which_patch
-
-        # if top_keypoints is None:
-        #     return
-
-        kd.patches_keypoints_filtered.normalised = top_keypoints
-        kd.patches_keypoints_filtered.confidences = top_confidences
-        kd.patches_keypoints_filtered.which_patch = which_patches
-
     def _filter_keypoints(self, kd: Keypoints):
         self._filter_image_level_keypoints(kd)
         kd.image_keypoints.is_filtered = True
-        self._filter_patches_level_keypoints(kd)
-        kd.patches_keypoints.is_filtered = True
-
         kd.is_filtered = True
         kd.save()
 
@@ -74,13 +58,10 @@ class DataFilter:
         for index, (name_a, name_b) in tqdm(enumerate(zip(image_names, image_names[1:])), desc="Extracting matches", ncols=100, total=len(image_names) - 1):
             # logger.info(f'Data Filter {name_a, name_b}')
             if a is None:
-                a = Keypoints(name_a)
-                a.load()
-
+                a = Keypoints.load_from_name(name_a)
                 top_keypoints = self._filter_keypoints(a)
 
-            b = Keypoints(name_b)
-            b.load()
+            b = Keypoints.load_from_name(name_b)
 
             # Load matches data between a and b
             pair = Matches(a, b)
@@ -94,4 +75,3 @@ class DataFilter:
             top_keypoints = self._filter_keypoints(b)
 
             a = b
-
