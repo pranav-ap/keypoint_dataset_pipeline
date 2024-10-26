@@ -3,9 +3,9 @@ components:
     matcher: roma
 
 task:
-    name: basalt  # samples basalt
-    consider_samples: False
-    track: vicon_room1/V1_02_medium
+    name: samples  # samples basalt
+    consider_samples: True
+    track: V1_02_medium
     limit_count: 0
 
 samples:
@@ -24,7 +24,7 @@ paths:
         images_dir: ${paths.project_root}/data/samples/images
         tensors_dir: ${paths.project_root}/data/samples/tensors
     basalt:
-        csv: ${paths.project_root}/data/basalt/EuRoC_V1_01_easy_filenames.csv
+        csv: ${paths.project_root}/data/basalt/keyframes/${task.track}.keyframes.csv
         images_dir: ${paths.ws_root}/datasets/euroc/${task.track}/mav0/cam0/data
         tensors_dir: ${paths.ws_root}/tensors/${task.name}/${task.track}
         zip_dir: ${paths.project_root}/zips/${task.name}/${task.track}

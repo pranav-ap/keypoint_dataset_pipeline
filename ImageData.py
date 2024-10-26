@@ -124,18 +124,21 @@ class Keypoints:
     def __init__(self, image_name, is_filtered=False):
         self.is_filtered = is_filtered
 
+        self.image_name: str = image_name.strip()
         self.image_path: str = f"{config.paths[config.task.name].images_dir}/{image_name}"
+
+        if config.task.name == 'basalt':
+            self.image_path = f"{self.image_path}.png"
+
         self.image: Image.Image = self._init_image()
-        image_name, _ = os.path.splitext(image_name)
-        self.image_name: str = image_name
 
         patch_images, patches_shape = self._init_grid_patches()
         self.patch_images: Dict[Tuple[int, int], Image.Image] = patch_images
         self.patches_shape: Tuple[int, int] = patches_shape
 
-        self.image_keypoints = ImageKeypoints(image_name, is_filtered=False)
-        self.patches_keypoints = PatchesKeypoints(image_name, is_filtered=False)
-        self.image_keypoints_filtered = ImageKeypoints(image_name, is_filtered=True)
+        self.image_keypoints = ImageKeypoints(self.image_name, is_filtered=False)
+        self.patches_keypoints = PatchesKeypoints(self.image_name, is_filtered=False)
+        self.image_keypoints_filtered = ImageKeypoints(self.image_name, is_filtered=True)
 
     def _init_image(self):
         assert os.path.exists(self.image_path)
