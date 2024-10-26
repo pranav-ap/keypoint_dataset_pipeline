@@ -42,10 +42,12 @@ class DataPipeline:
         os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline/libs/DeDoDe')
         detector = DeDoDeDetector()
         detector.extract_keypoints(image_names)
+        del detector
 
         os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline/libs/RoMa')
         matcher = RoMaMatcher()
         matcher.extract_warp_certainty(image_names)
+        del matcher
 
         os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline')
         data_filter = DataFilter()

@@ -96,7 +96,7 @@ class DeDoDeDetector(KeypointDetector):
             kd.patches_keypoints.which_patch.extend([wp] * keys.shape[0])
 
     def extract_keypoints(self, image_names):
-        start_time = time.time()
+        # start_time = time.time()
 
         chunk_size = config.dedode.batch_size
         total_chunks = (len(image_names) + chunk_size - 1) // chunk_size
@@ -109,10 +109,10 @@ class DeDoDeDetector(KeypointDetector):
             for kd in kds:
                 kd.save()
 
-        end_time = time.time()
-        duration = end_time - start_time
+        # end_time = time.time()
+        # duration = end_time - start_time
 
-        hours, remainder = divmod(duration, 3600)
-        minutes, seconds = divmod(remainder, 60)
+        # hours, remainder = divmod(duration, 3600)
+        # minutes, seconds = divmod(remainder, 60)
 
-        logger.info(f"Time taken: {int(hours)}h {int(minutes)}m {seconds:.2f}s")
+        # logger.info(f"Time taken: {int(hours)}h {int(minutes)}m {seconds:.2f}s")
