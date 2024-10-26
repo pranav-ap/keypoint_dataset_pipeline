@@ -1,0 +1,43 @@
+components:
+  detector: dedode
+  matcher: roma
+task:
+  name: basalt
+  consider_samples: false
+  track: V1_01_easy
+  limit_count: 0
+samples:
+  samples:
+    reference: sacre_coeur_A.jpg
+    target: sacre_coeur_B.jpg
+  basalt:
+    reference: 1403715273612143104.png
+    target: 1403715273962142976.png
+paths:
+  ws_root: /home/stud/ath/ath_ws
+  project_root: ${paths.ws_root}/keypoint_dataset_pipeline
+  samples:
+    images_dir: ${paths.project_root}/data/samples/images
+    tensors_dir: ${paths.project_root}/data/samples/tensors
+  basalt:
+    csv: ${paths.project_root}/data/basalt/keyframes/${task.track}.keyframes.csv
+    images_dir: ${paths.ws_root}/datasets/euroc/${task.track}/mav0/cam0/data
+    tensors_dir: ${paths.ws_root}/tensors/${task.name}/${task.track}
+    zip_dir: ${paths.project_root}/zips/${task.name}/${task.track}
+image:
+  image_shape:
+  - 504
+  - 504
+  patch_shape:
+  - 84
+  - 84
+dedode:
+  batch_size: 6
+  image_keypoints_count: 300
+  patch_keypoints_count: 3
+  filter:
+    images_sample_count: 100
+    patches_sample_count: 15
+roma:
+  filter:
+    confidence_threshold: 0.6

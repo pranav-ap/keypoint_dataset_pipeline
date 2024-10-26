@@ -21,8 +21,8 @@ class DataPipeline:
                 config.samples[config.task.name].target
             ]
 
-        df = pd.read_csv(config.paths[config.task.name].csv)
-        image_names = df['filename'].tolist()
+        df = pd.read_csv(config.paths[config.task.name].csv, header=None)
+        image_names = df[0].astype(str)
 
         if config.task.limit_count != 0:
             count = config.task.limit_count
