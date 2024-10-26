@@ -2,42 +2,48 @@ components:
     detector: dedode
     matcher: roma
 
-task: samples  # samples basalt
+task:
+    name: basalt  # samples basalt
+    consider_samples: False # True False
+    track: V1_03_difficult
+    limit_count: 0
 
 samples:
-    reference: sacre_coeur_A.jpg
-    target: sacre_coeur_B.jpg
+    samples:
+        reference: sacre_coeur_A.jpg
+        target: sacre_coeur_B.jpg
+    basalt:
+        reference: 1403715273612143104.png
+        target: 1403715273962142976.png
 
 paths:
+    ws_root: /home/stud/ath/ath_ws
+    project_root: ${paths.ws_root}/keypoint_dataset_pipeline
+
     samples:
-        images_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/samples/images
-        tensors_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/samples/tensors
+        images_dir: ${paths.project_root}/data/samples/images
+        tensors_dir: ${paths.project_root}/data/samples/tensors
     basalt:
-        images_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/euroc/images
-        tensors_dir: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/euroc/tensors
-        csv: /home/stud/ath/ath_ws/keypoint_dataset_pipeline/data/euroc/EuRoC_V1_01_easy_filenames.csv
+        csv: ${paths.project_root}/data/basalt/keyframes/${task.track}.keyframes.csv
+        images_dir: ${paths.ws_root}/datasets/euroc/${task.track}/mav0/cam0/data
+        tensors_dir: ${paths.ws_root}/tensors/${task.name}/${task.track}
+        zip_dir: ${paths.project_root}/zips/${task.name}/${task.track}
 
 image:
-    resize: [512, 512] # [448, 448]
-    patch_shape: [64, 64, 3]
+    image_shape: [504, 504]
+    patch_shape: [84, 84]  # [42, 42] 
 
 dedode:
-    image_keypoints_count: 10_000
-    patch_keypoints_count: 2000
+    batch_size: 6
+    image_keypoints_count: 300
+    patch_keypoints_count: 3
 
     filter:
-        image_confidence_threshold: 0.2
-        patches_confidence_threshold: 0.3
-
-        top_k_strategy: sorting  # sorting weighted_sampling
-        keep_top_k: 5_000
+        # weighted sampling
+        images_sample_count: 100
+        patches_sample_count: 15
 
 roma:
     filter:
-        confidence_threshold: 0.5
-
-dual_softmax:
-    confidence_threshold: 0.1
-    inv_temp: 20
-
-device: 'cpu'
+        # keep matches over the absolute confidence threshold
+        confidence_threshold: 0.6

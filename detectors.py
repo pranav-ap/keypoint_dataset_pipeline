@@ -1,14 +1,14 @@
 from config import config
-from utils import get_best_device, logger
-from ImageData import KeypointsData
-import cv2
+from utils import get_best_device, logger, chunk_iterable
+from ImageData import Keypoints
 import numpy as np
 from PIL import Image
+import time
 import torch
 import torchvision.transforms as T
 from abc import ABC, abstractmethod
 from typing import List
-from rich.progress import Progress
+from tqdm import tqdm
 
 
 class KeypointDetector(ABC):
@@ -34,142 +34,85 @@ class DeDoDeDetector(KeypointDetector):
             std=[0.229, 0.224, 0.225]
         )
 
-    """
-    Utils
-    """
-
     def _preprocess_image(self, image: Image.Image):
         standard_im = np.array(image) / 255.0
 
-        # Convert grayscale to 3-channel if needed
         if standard_im.ndim == 2:
             standard_im = np.stack([standard_im] * 3, axis=0)  # (3, H, W)
         else:
             standard_im = np.transpose(standard_im, (2, 0, 1))  # (3, H, W)
 
-        standard_im = self.normalizer(torch.from_numpy(standard_im)).float()
-
-        return standard_im
-
-    def _make_batch(self, image: Image.Image):
-        standard_im = self._preprocess_image(image).to(self.device)[None]
-
-        batch = {"image": standard_im}
-        return batch
-
-    """
-    Detect, Describe, Match
-    """
-
-    def _detect(self, image: Image.Image, keypoint_count):
-        batch = self._make_batch(image)
-
-        detections = self.detector.detect(batch, keypoint_count)
-        keypoints, confidences = detections["keypoints"], detections["confidence"]
-
-        keypoints = keypoints.squeeze(0)
-        confidences = confidences.squeeze(0)
-
-        max_confidence = confidences.max()
-        min_confidence = confidences.min()
-
-        confidences = (confidences - min_confidence) / (max_confidence - min_confidence)
-
-        return keypoints, confidences
-
-    def _image_detect(self, kd: KeypointsData):
-        keypoint_count = config.dedode.image_keypoints_count
-
-        keypoints, confidences = self._detect(
-            kd.image,
-            keypoint_count
-        )
-
-        kd.init_keypoints(keypoints)
-        kd.confidences = confidences
-
-    def _patch_detect(self, image: Image.Image, row, col):
-        keypoint_count = config.dedode.patch_keypoints_count
-
-        keypoints, confidences = self._detect(
-            image,
-            keypoint_count
-        )
-
-        patch_height, patch_width, _ = config.image.patch_shape
-        keypoints_coords: List[cv2.KeyPoint] = []
-
-        for x, y in keypoints:
-            x = int((x.item() + 1) * (patch_width / 2))
-            y = int((y.item() + 1) * (patch_height / 2))
-
-            global_x = x + row * patch_width
-            global_y = y + col * patch_height
-
-            kp = cv2.KeyPoint(global_x, global_y, 1)
-
-            keypoints_coords.append(kp)
-
-        return keypoints, keypoints_coords, confidences
+        x = torch.from_numpy(standard_im).float().to(self.device)
+        return self.normalizer(x)
 
     @staticmethod
     def _is_cell_empty(row, col, keypoints_coords) -> bool:
-        patch_height, patch_width, _ = config.image.patch_shape
+        patch_height, patch_width = config.image.patch_shape
+        x_min, x_max = row * patch_width, (row + 1) * patch_width
+        y_min, y_max = col * patch_height, (col + 1) * patch_height
 
-        # Define the bounds of the cell
-        x_min = row * patch_width
-        x_max = (row + 1) * patch_width
-        y_min = col * patch_height
-        y_max = (col + 1) * patch_height
+        return all(not (x_min <= x < x_max and y_min <= y < y_max) for kp in keypoints_coords for x, y in [kp.pt])
 
-        # Check if any point falls inside this cell
-        for kp in keypoints_coords:
-            x, y = kp.pt
-            if x_min <= x < x_max and y_min <= y < y_max:
-                # Cell is not empty, a point is inside
-                return False
+    @torch.no_grad()
+    def _detect(self, images: List[Image.Image], keypoint_count):
+        image_processed = [self._preprocess_image(image).to(self.device) for image in images]
+        batch = {"image": torch.stack(image_processed)}
 
-        # No points found, cell is empty
-        return True
+        detections = self.detector.detect(batch, keypoint_count)
 
-    def _patches_detect(self, kd: KeypointsData):
-        keypoints_patches = []
-        keypoints_coords_patches = []
-        confidences_patches = []
+        return detections["keypoints"], detections["confidence"]
 
-        num_rows, num_cols = kd.grid_patches_shape
+    def _images_detect(self, kds: List[Keypoints]):
+        keypoint_count = config.dedode.image_keypoints_count
+        images = [kd.image for kd in kds]
+        keypoints_batch, confidences_batch = self._detect(images, keypoint_count)
 
-        for i in range(num_rows):
-            for j in range(num_cols):
-                if not self._is_cell_empty(i, j, kd.keypoints_coords):
-                    continue
+        for kd, keypoints, confidences in zip(kds, keypoints_batch, confidences_batch):
+            kd.image_keypoints.normalised = keypoints
+            kd.image_keypoints.confidences = confidences
 
-                patch = kd.grid_patches[(i, j)]
-                package = self._patch_detect(patch, i, j)
-                keypoints, keypoints_coords, confidences = package
+    def _patches_detect(self, kds: List[Keypoints]):
+        images, which_patch, which_image = [], [], []
 
-                keypoints_patches.append(keypoints)
-                keypoints_coords_patches.extend(keypoints_coords)
-                confidences_patches.append(confidences)
+        for kd in kds:
+            num_rows, num_cols = kd.patches_shape
+            image_coords = kd.image_keypoints.as_image_coords()
 
-        kd.keypoints_patches = torch.cat(keypoints_patches, dim=0)
-        kd.keypoints_patches_coords = keypoints_coords_patches
-        kd.confidences_patches = torch.cat(confidences_patches, dim=0)
+            for i in range(num_rows):
+                for j in range(num_cols):
+                    if not self._is_cell_empty(i, j, image_coords):
+                        continue
+
+                    images.append(kd.patch_images[(i, j)])
+                    which_patch.append((i, j))
+                    which_image.append(kd)
+
+        keypoint_count = config.dedode.patch_keypoints_count
+        keypoints, confidences = self._detect(images, keypoint_count)
+
+        for kd, wp, keys, confs in zip(which_image, which_patch, keypoints, confidences):
+            kd.patches_keypoints.normalised = torch.cat([kd.patches_keypoints.normalised, keys], dim=0) if kd.patches_keypoints.normalised.numel() > 0 else keys
+            kd.patches_keypoints.confidences = torch.cat([kd.patches_keypoints.confidences, confs], dim=0) if kd.patches_keypoints.confidences.numel() > 0 else confs
+            kd.patches_keypoints.which_patch.extend([wp] * keys.shape[0])
 
     def extract_keypoints(self, image_names):
-        with Progress() as progress:
-            task = progress.add_task(
-                "[cyan]Extracting keypoints...",
-                total=len(image_names)
-            )
+        # start_time = time.time()
 
-            for name in image_names:
-                kd = KeypointsData(name)
+        chunk_size = config.dedode.batch_size
+        total_chunks = (len(image_names) + chunk_size - 1) // chunk_size
 
-                self._image_detect(kd)
-                self._patches_detect(kd)
+        for image_names_chunk in tqdm(chunk_iterable(image_names, chunk_size), total=total_chunks, desc="Extracting keypoints", ncols=100):
+            kds = [Keypoints(name, is_filtered=False) for name in image_names_chunk]
+            self._images_detect(kds)
+            self._patches_detect(kds)
+
+            for kd in kds:
                 kd.save()
 
-                progress.advance(task)
+        # end_time = time.time()
+        # duration = end_time - start_time
 
-        progress.stop()
+        # hours, remainder = divmod(duration, 3600)
+        # minutes, seconds = divmod(remainder, 60)
+
+        # logger.info(f"Time taken: {int(hours)}h {int(minutes)}m {seconds:.2f}s")

@@ -1,5 +1,5 @@
 from config import config
-from utils import logger
+from utils import logger, get_best_device
 import cv2
 import os
 import torch
@@ -7,10 +7,11 @@ import numpy as np
 from PIL import Image
 from skimage.util import view_as_blocks
 from typing import List, Optional, Tuple, Dict
+from abc import ABC
 
 
 def load_tensor(filename: str) -> torch.tensor:
-    filepath: str = os.path.join(config.paths[config.task].tensors_dir, filename)
+    filepath: str = os.path.join(config.paths[config.task.name].tensors_dir, filename)
     assert os.path.exists(filepath)
     tensor: torch.tensor = torch.load(filepath, weights_only=True)
     return tensor
@@ -18,39 +19,137 @@ def load_tensor(filename: str) -> torch.tensor:
 
 def save_tensor(tensor: torch.tensor, filename: str):
     assert tensor is not None
-    filepath = os.path.join(config.paths[config.task].tensors_dir, filename)
+    filepath = os.path.join(config.paths[config.task.name].tensors_dir, filename)
     torch.save(tensor, filepath)
 
 
-class KeypointsData:
-    def __init__(self, image_name):
-        self.config = config
+"""
+KEYPOINTS
+"""
 
-        self.image_path: str = f"{config.paths[config.task].images_dir}/{image_name}"
 
-        image_name, _ = os.path.splitext(image_name)
+class _Keypoints(ABC):
+    device = get_best_device()
+
+    def __init__(self, image_name, is_filtered):
         self.image_name: str = image_name
+        self.is_filtered: bool = is_filtered
+
+        self.normalised: torch.Tensor = torch.empty(0, device=self.device)
+        self.confidences: torch.Tensor = torch.empty(0, device=self.device)
+
+
+class ImageKeypoints(_Keypoints):
+    def __init__(self, image_name, is_filtered=False):
+        super().__init__(image_name, is_filtered)
+
+    def as_image_coords(self) -> List[cv2.KeyPoint]:
+        w, h = config.image.image_shape
+
+        if self.normalised.numel() == 0:
+            return []
+
+        coords = [
+            cv2.KeyPoint(
+                int((x.item() + 1) * (w / 2)),
+                int((y.item() + 1) * (h / 2)),
+                1
+            )
+            for x, y in self.normalised
+        ]
+
+        return coords
+
+    def load(self):
+        filename = f"{self.image_name}_keypoints_normalised.pt" if not self.is_filtered else f"{self.image_name}_keypoints_normalised_filtered.pt"
+        self.normalised = load_tensor(filename)
+
+        filename = f"{self.image_name}_confidences.pt" if not self.is_filtered else f"{self.image_name}_confidences_filtered.pt"
+        self.confidences = load_tensor(filename)
+
+    def save(self):
+        filename = f"{self.image_name}_keypoints_normalised.pt" if not self.is_filtered else f"{self.image_name}_keypoints_normalised_filtered.pt"
+        save_tensor(self.normalised, filename)
+
+        filename = f"{self.image_name}_confidences.pt" if not self.is_filtered else f"{self.image_name}_confidences_filtered.pt"
+        save_tensor(self.confidences, filename)
+
+
+class PatchesKeypoints(_Keypoints):
+    def __init__(self, image_name, is_filtered=False):
+        super().__init__(image_name, is_filtered)
+        self.which_patch: List[Tuple[int, int]] = []
+
+    def as_image_coords(self) -> List[cv2.KeyPoint]:
+        patch_height, patch_width = config.image.patch_shape
+        coords = []
+
+        for (x, y), (row, col) in zip(self.normalised, self.which_patch):
+            x = int((x.item() + 1) * (patch_width / 2))
+            y = int((y.item() + 1) * (patch_height / 2))
+
+            global_x = x + row * patch_width
+            global_y = y + col * patch_height
+
+            kp = cv2.KeyPoint(global_x, global_y, 1)
+            coords.append(kp)
+
+        return coords
+
+    def load(self):
+        filename = f"{self.image_name}_keypoints_normalised_patches.pt" if not self.is_filtered else f"{self.image_name}_keypoints_normalised_patches_filtered.pt"
+        self.normalised = load_tensor(filename)
+
+        filename = f"{self.image_name}_confidences_patches.pt" if not self.is_filtered else f"{self.image_name}_confidences_patches_filtered.pt"
+        self.confidences = load_tensor(filename)
+
+        filename = f"{self.image_name}_which_patch.pt" if not self.is_filtered else f"{self.image_name}_which_patch_filtered.pt"
+        which_patch_tensor = load_tensor(filename)
+        which_patch = [(int(x), int(y)) for x, y in which_patch_tensor]
+        self.which_patch = which_patch
+
+    def save(self):
+        filename = f"{self.image_name}_keypoints_normalised_patches.pt" if not self.is_filtered else f"{self.image_name}_keypoints_normalised_patches_filtered.pt"
+        save_tensor(self.normalised, filename)
+
+        filename = f"{self.image_name}_confidences_patches.pt" if not self.is_filtered else f"{self.image_name}_confidences_patches_filtered.pt"
+        save_tensor(self.confidences, filename)
+
+        filename = f"{self.image_name}_which_patch.pt" if not self.is_filtered else f"{self.image_name}_which_patch_filtered.pt"
+        which_patch = torch.tensor(self.which_patch)
+        save_tensor(which_patch, filename)
+
+
+class Keypoints:
+    def __init__(self, image_name, is_filtered=False):
+        self.is_filtered = is_filtered
+
+        self.image_name: str = image_name.strip()
+        self.image_path: str = f"{config.paths[config.task.name].images_dir}/{image_name}"
+
+        if config.task.name == 'basalt' and not config.task.consider_samples:
+            self.image_path = f"{self.image_path}.png"
 
         self.image: Image.Image = self._init_image()
 
-        grid_patches, grid_patches_shape = self._init_grid_patches()
+        patch_images, patches_shape = self._init_grid_patches()
+        self.patch_images: Dict[Tuple[int, int], Image.Image] = patch_images
+        self.patches_shape: Tuple[int, int] = patches_shape
 
-        self.grid_patches: Dict[Tuple[int, int], Image.Image] = grid_patches
-        self.grid_patches_shape: Tuple[int, int] = grid_patches_shape
+        self.image_keypoints = ImageKeypoints(self.image_name, is_filtered=False)
+        self.patches_keypoints = PatchesKeypoints(self.image_name, is_filtered=False)
 
-        self.keypoints: Optional[torch.tensor] = None
-        self.keypoints_coords: Optional[List[cv2.KeyPoint]] = None
-        self.confidences: Optional[torch.tensor] = None
-
-        self.keypoints_patches: Optional[torch.tensor] = None
-        self.keypoints_patches_coords: Optional[List[cv2.KeyPoint]] = None
-        self.confidences_patches: Optional[torch.tensor] = None
+        self.image_keypoints_filtered = ImageKeypoints(self.image_name, is_filtered=True)
+        self.patches_keypoints_filtered = PatchesKeypoints(self.image_name, is_filtered=True)
 
     def _init_image(self):
+        assert os.path.exists(self.image_path)
+
         image = Image.open(self.image_path)
-        x, y = self.config.image.resize
+        x, y = config.image.image_shape
         image = image.resize((x, y))
         image = image.convert('RGB')
+
         return image
 
     def _init_grid_patches(self):
@@ -59,8 +158,8 @@ class KeypointsData:
         # image_np.shape (896, 896, 3) example
         image_np = np.array(self.image)
         # view.shape (7, 7, 1, 128, 128, 3)
-        x, y, z = self.config.image.patch_shape
-        view = view_as_blocks(image_np, (x, y, z))
+        x, y = config.image.patch_shape
+        view = view_as_blocks(image_np, (x, y, 3))
         # view.shape (7, 7, 128, 128, 3)
         view = view.squeeze()
 
@@ -75,75 +174,74 @@ class KeypointsData:
 
         return grid_patches, grid_patches_shape
 
-    def init_keypoints(self, keypoints: torch.tensor):
-        assert keypoints is not None
+    @staticmethod
+    def load_from_name(image_name, is_filtered=False):
+        kd = Keypoints(image_name, is_filtered)
+        kd.load()
+        return kd
 
-        self.keypoints = keypoints
+    """
+    Getters
+    """
 
-        self.keypoints_coords = [
-            cv2.KeyPoint(
-                int((x.item() + 1) * (self.image.width / 2)),
-                int((y.item() + 1) * (self.image.height / 2)),
-                1
-            )
-            for x, y in self.keypoints
-        ]
+    @staticmethod
+    def _get_unique_coords(keypoints1: List[cv2.KeyPoint], keypoints2: List[cv2.KeyPoint]) -> List[cv2.KeyPoint]:
+        coords = keypoints1 + keypoints2
 
-    def _init_keypoints_patches(self, keypoints_patches: torch.tensor):
-        assert keypoints_patches is not None
+        unique_coords = []
+        seen = set()
 
-        self.keypoints_patches = keypoints_patches
+        for kp in coords:
+            if kp.pt not in seen:
+                seen.add(kp.pt)
+                unique_coords.append(kp)
 
-        self.keypoints_patches_coords = [
-            cv2.KeyPoint(
-                int((x.item() + 1) * (self.image.width / 2)),
-                int((y.item() + 1) * (self.image.height / 2)),
-                1
-            )
-            for x, y in self.keypoints_patches
-        ]
+        return unique_coords
+
+    def get_all_coords(self):
+        assert self.image_keypoints
+        x: List[cv2.KeyPoint] = self.image_keypoints.as_image_coords()
+        assert self.patches_keypoints
+        y: List[cv2.KeyPoint] = self.patches_keypoints.as_image_coords()
+
+        return self._get_unique_coords(x, y)
+
+    def get_all_filtered_coords(self):
+        assert self.image_keypoints_filtered
+        x: List[cv2.KeyPoint] = self.image_keypoints_filtered.as_image_coords()
+        assert self.image_keypoints_filtered
+        y: List[cv2.KeyPoint] = self.patches_keypoints_filtered.as_image_coords()
+
+        return self._get_unique_coords(x, y)
 
     """
     Load & Save
     """
 
     def load(self):
-        if self.keypoints is None or self.keypoints_coords is None:
-            filename = f"{self.image_name}_keypoints.pt"
-            keypoints = load_tensor(filename)
-            self.init_keypoints(keypoints)
+        self.image_keypoints.load()
+        self.patches_keypoints.load()
 
-        if self.confidences is None:
-            filename = f"{self.image_name}_confidences.pt"
-            self.confidences = load_tensor(filename)
-
-        if self.keypoints_patches is None or self.keypoints_patches_coords is None:
-            filename = f"{self.image_name}_keypoints_patches.pt"
-            keypoints_patches = load_tensor(filename)
-            self._init_keypoints_patches(keypoints_patches)
-
-        if self.confidences_patches is None:
-            filename = f"{self.image_name}_confidences_patches.pt"
-            self.confidences_patches = load_tensor(filename)
+        if self.is_filtered:
+            self.image_keypoints_filtered.load()
+            self.patches_keypoints_filtered.load()
 
     def save(self):
-        filename = f"{self.image_name}_keypoints.pt"
-        save_tensor(self.keypoints, filename)
+        self.image_keypoints.save()
+        self.patches_keypoints.save()
 
-        filename = f"{self.image_name}_confidences.pt"
-        save_tensor(self.confidences, filename)
-
-        filename = f"{self.image_name}_keypoints_patches.pt"
-        save_tensor(self.keypoints_patches, filename)
-
-        filename = f"{self.image_name}_confidences_patches.pt"
-        save_tensor(self.confidences_patches, filename)
+        if self.is_filtered:
+            self.image_keypoints_filtered.save()
+            self.patches_keypoints_filtered.save()
 
 
-class MatchesData:
-    def __init__(self, a: KeypointsData, b: KeypointsData):
-        self.config = config
+"""
+MATCHES
+"""
 
+
+class Matches:
+    def __init__(self, a: Keypoints, b: Keypoints):
         self.a = a
         self.b = b
 
@@ -151,22 +249,19 @@ class MatchesData:
         self.pixel_coords: Optional[torch.tensor] = None
         self.certainty: Optional[torch.tensor] = None
 
-        self.left_matches_coords_filtered: Optional[List[cv2.KeyPoint]] = None
-        self.right_matches_coords_filtered: Optional[List[cv2.KeyPoint]] = None
+        self.left_coords: Optional[List[cv2.KeyPoint]] = None
+        self.right_coords: Optional[List[cv2.KeyPoint]] = None
 
     @staticmethod
-    def load_from_names(name_a, name_b, load_filtered_matches=False):
-        a = KeypointsData(name_a)
-        a.load()
+    def load_from_names(name_a, name_b, load_coords=False):
+        a = Keypoints.load_from_name(name_a)
+        b = Keypoints.load_from_name(name_b)
 
-        b = KeypointsData(name_b)
-        b.load()
-
-        pair = MatchesData(a, b)
+        pair = Matches(a, b)
         pair.load()
 
-        if load_filtered_matches:
-            pair.load_filtered_matches()
+        if load_coords:
+            pair.load_coords()
 
         return pair
 
@@ -174,6 +269,7 @@ class MatchesData:
     Utils
     """
 
+    # noinspection PyArgumentList
     def _warp_to_pixel_coords(self):
         h1, w1 = self.a.image.height, self.a.image.width
         h2, w2 = self.b.image.height, self.b.image.width
@@ -206,28 +302,6 @@ class MatchesData:
         self.warp = warp
         self.pixel_coords = self._warp_to_pixel_coords()
 
-    def get_random_reference_keypoints(self, confidence_threshold=0.6, num_points=5) -> List[cv2.KeyPoint]:
-        assert self.certainty is not None
-
-        # Create a binary mask where certainty is greater than the threshold
-        mask = self.certainty > confidence_threshold
-
-        # Get the coordinates of the points where mask is True
-        y_coords, x_coords = torch.nonzero(mask, as_tuple=True)
-
-        # If there are more points than required, randomly sample from them
-        if len(y_coords) > num_points:
-            indices = torch.randperm(len(y_coords))[:num_points]
-        else:
-            indices = torch.arange(len(y_coords))  # Take all if not enough points
-
-        points = [
-            cv2.KeyPoint(int(x_coords[i].item()), int(y_coords[i].item()), 1.)
-            for i in indices
-        ]
-
-        return points
-
     def get_good_matches(self, reference_keypoints: List[cv2.KeyPoint], confidence_threshold=0.6) -> Tuple[List[cv2.KeyPoint], List[cv2.KeyPoint]]:
         target_keypoints = []
         accepted_reference_keypoints = []
@@ -253,14 +327,12 @@ class MatchesData:
     """
 
     def load(self):
-        if self.warp is None or self.pixel_coords is None:
-            filename = f"{self.a.image_name}_{self.b.image_name}_warp.pt"
-            warp = load_tensor(filename)
-            self.set_warp(warp)
+        filename = f"{self.a.image_name}_{self.b.image_name}_warp.pt"
+        warp = load_tensor(filename)
+        self.set_warp(warp)
 
-        if self.certainty is None:
-            filename = f"{self.a.image_name}_{self.b.image_name}_certainty.pt"
-            self.certainty = load_tensor(filename)
+        filename = f"{self.a.image_name}_{self.b.image_name}_certainty.pt"
+        self.certainty = load_tensor(filename)
 
     def save(self):
         filename = f"{self.a.image_name}_{self.b.image_name}_warp.pt"
@@ -269,32 +341,27 @@ class MatchesData:
         filename = f"{self.a.image_name}_{self.b.image_name}_certainty.pt"
         save_tensor(self.certainty, filename)
 
-    def load_filtered_matches(self):
-        if self.left_matches_coords_filtered is None or self.right_matches_coords_filtered is None:
-            filename = f"{self.a.image_name}_{self.b.image_name}_matches.pt"
-            matches = load_tensor(filename)
+    def load_coords(self):
+        filename = f"{self.a.image_name}_{self.b.image_name}_matches.pt"
+        matches = load_tensor(filename)
 
-            logger.debug(f'matches.shape {matches.shape}')
+        self.left_coords = [
+            cv2.KeyPoint(int(x), int(y), 1.)
+            for x, y in matches[:, :2]
+        ]
 
-            self.left_matches_coords_filtered = [
-                cv2.KeyPoint(int(x), int(y), 1.)
-                for x, y in matches[:, :2]
-            ]
+        self.right_coords = [
+            cv2.KeyPoint(int(x), int(y), 1.)
+            for x, y in matches[:, 2:]
+        ]
 
-            self.right_matches_coords_filtered = [
-                cv2.KeyPoint(int(x), int(y), 1.)
-                for x, y in matches[:, 2:]
-            ]
-
-            logger.debug(f'len(self.left_matches_coords_filtered) {len(self.left_matches_coords_filtered)}')
-
-    def save_filtered_matches(self):
-        assert self.left_matches_coords_filtered is not None and self.right_matches_coords_filtered is not None
+    def save_coords(self):
+        assert self.left_coords is not None and self.right_coords is not None
 
         filename = f"{self.a.image_name}_{self.b.image_name}_matches.pt"
 
-        left_matches_coords_filtered = torch.tensor([kp.pt for kp in self.left_matches_coords_filtered])
-        right_matches_coords_filtered = torch.tensor([kp.pt for kp in self.right_matches_coords_filtered])
+        left_coords = torch.tensor([kp.pt for kp in self.left_coords])
+        right_coords = torch.tensor([kp.pt for kp in self.right_coords])
 
-        matches = torch.cat([left_matches_coords_filtered, right_matches_coords_filtered], dim=1)
+        matches = torch.cat([left_coords, right_coords], dim=1)
         save_tensor(matches, filename)

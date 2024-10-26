@@ -1,9 +1,6 @@
-./DeDoDe
-./Restormer
-./RoMa
-./outputs
+./libs
 ./INSTRUCTIONS.md
-./scraps/pass.txt
+./scraps
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

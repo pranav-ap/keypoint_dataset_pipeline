@@ -1,8 +1,9 @@
 from config import config
 from utils import get_best_device, logger
-from ImageData import KeypointsData, MatchesData
+from ImageData import Keypoints, Matches
 from typing import Optional
-from rich.progress import Progress
+from tqdm import tqdm
+import time
 
 
 class RoMaMatcher:
@@ -15,45 +16,43 @@ class RoMaMatcher:
         from romatch import roma_outdoor
         self.model = roma_outdoor(
             device=self.device,
-            coarse_res=560,
-            upsample_res=config.image.resize
+            upsample_res=config.image.image_shape
         )
 
         self.model.symmetric = False
         logger.info('Loading RoMaMatcher Done')
 
     def extract_warp_certainty(self, image_names):
-        with Progress() as progress:
-            task = progress.add_task(
-                "[cyan]Extracting warps...",
-                total=len(image_names) - 1
+        a: Optional[Keypoints] = None
+
+        for name_a, name_b in tqdm(zip(image_names, image_names[1:]), desc="Extracting warps", ncols=100, total=len(image_names) - 1):
+            # logger.info(f'Matcher {name_a, name_b}')
+            # start_time = time.time()
+
+            if a is None:
+                a = Keypoints(name_a)
+
+            b = Keypoints(name_b)
+
+            # Match using model and retrieve warp and certainty
+            warp, certainty = self.model.match(
+                a.image, b.image,
+                device=self.device
             )
 
-            a: Optional[KeypointsData] = None
+            # Set warp and certainty for the match pair
+            pair = Matches(a, b)
+            pair.set_warp(warp)
+            pair.certainty = certainty
+            pair.save()
 
-            for name_a, name_b in zip(image_names, image_names[1:]):
-                if a is None:
-                    a = KeypointsData(name_a)
-                    a.load()
+            # Move forward
+            a = b
 
-                b = KeypointsData(name_b)
-                b.load()
+            # end_time = time.time()
+            # duration = end_time - start_time
 
-                # Match using model and retrieve warp and certainty
-                warp, certainty = self.model.match(
-                    a.image_path, b.image_path,
-                    device=self.device
-                )
+            # hours, remainder = divmod(duration, 3600)
+            # minutes, seconds = divmod(remainder, 60)
 
-                # Set warp and certainty for the match pair
-                pair = MatchesData(a, b)
-                pair.set_warp(warp)
-                pair.certainty = certainty
-                pair.save()
-
-                # Move forward
-                a = b
-
-                progress.advance(task)
-
-            progress.stop()
+            # logger.info(f"Time taken : {int(hours)}h {int(minutes)}m {seconds:.2f}s")

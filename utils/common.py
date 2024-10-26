@@ -1,7 +1,15 @@
 import os
+import zipfile
 import shutil
 import torch
 from PIL import Image
+from itertools import islice
+
+
+def chunk_iterable(iterable, chunk_size):
+    iterator = iter(iterable)
+    for first in iterator:
+        yield [first] + list(islice(iterator, chunk_size - 1))
 
 
 def get_best_device(verbose=False):
@@ -61,6 +69,12 @@ def resize_image_to_nearest_multiple(image: Image.Image, patch_height: int, patc
     return resized_image
 
 
-def log_tensor_shape(tensor, name="Tensor"):
-    print(f"{name} shape: {tensor.shape}")
+def zip_folder(folder_path, output_zip, wild):
+    with zipfile.ZipFile(output_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(folder_path):
+            for file in files:
+                if file.endswith(wild):
+                    file_path = os.path.join(root, file)
+                    # noinspection PyTypeChecker
+                    zipf.write(file_path, os.path.relpath(file_path, folder_path))
 
