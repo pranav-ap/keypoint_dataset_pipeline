@@ -5,7 +5,7 @@ components:
 task:
     name: basalt  # samples basalt
     consider_samples: False # True False
-    track: V1_03_difficult
+    track: V2_02_medium
     limit_count: 0
 
 samples:
