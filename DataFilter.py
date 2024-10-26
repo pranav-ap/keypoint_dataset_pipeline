@@ -40,7 +40,7 @@ class DataFilter:
 
         top_keypoints = keypoints[selected_indices]
         top_confidences = confidences[selected_indices]
-        top_which_patch = which_patch[selected_indices]
+        top_which_patch = [which_patch[i] for i in selected_indices]
 
         kd.patches_keypoints_filtered.normalised = top_keypoints
         kd.patches_keypoints_filtered.confidences = top_confidences
