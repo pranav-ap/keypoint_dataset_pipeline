@@ -127,7 +127,7 @@ class Keypoints:
         self.image_name: str = image_name.strip()
         self.image_path: str = f"{config.paths[config.task.name].images_dir}/{image_name}"
 
-        if config.task.name == 'basalt':
+        if config.task.name == 'basalt' and not config.task.consider_samples:
             self.image_path = f"{self.image_path}.png"
 
         self.image: Image.Image = self._init_image()

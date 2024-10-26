@@ -37,6 +37,7 @@ class DataPipeline:
         logger.info(f'Matcher   : {config.components.matcher}')
         logger.info(f'Device    : {get_best_device()}')
 
+        os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline/')
         image_names = self.get_image_names()
 
         os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline/libs/DeDoDe')

@@ -36,7 +36,10 @@ class Painter:
         kd = Keypoints.load_from_name(name)
 
         num_rows, num_cols = kd.patches_shape
+        print(f'num_rows, num_cols {num_rows, num_cols}')
         patch_height, patch_width = kd.patch_images[0, 0].size
+        print(f'patch_height, patch_width {patch_height, patch_width}')
+
         grid_size = (
             num_cols * patch_width + (num_cols - 1) * padding,
             num_rows * patch_height + (num_rows - 1) * padding
