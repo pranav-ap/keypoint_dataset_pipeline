@@ -36,11 +36,12 @@ image:
 dedode:
     batch_size: 6
     image_keypoints_count: 300
-    patch_keypoints_count: 5
+    patch_keypoints_count: 3
 
     filter:
         # weighted sampling
-        sample_count: 100
+        images_sample_count: 100
+        patches_sample_count: 15
 
 roma:
     filter:

@@ -53,6 +53,7 @@ class DataPipeline:
         os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline')
         data_filter = DataFilter()
         data_filter.extract_good_matches(image_names)
+        del data_filter
 
         if not config.task.consider_samples:
             folder_to_zip = config.paths[config.task.name].tensors_dir

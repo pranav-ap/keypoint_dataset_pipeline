@@ -12,7 +12,7 @@ class DataFilter:
         keypoints = kd.image_keypoints.normalised
         confidences = kd.image_keypoints.confidences
 
-        count = min(config.dedode.filter.sample_count, len(keypoints))
+        count = min(config.dedode.filter.images_sample_count, len(keypoints))
 
         if keypoints is None or count == 0:
             return
@@ -20,14 +20,38 @@ class DataFilter:
         selected_indices = torch.multinomial(confidences, count, replacement=False)
 
         top_keypoints = keypoints[selected_indices]
-        top_confidences = keypoints[selected_indices]
+        top_confidences = confidences[selected_indices]
 
         kd.image_keypoints_filtered.normalised = top_keypoints
         kd.image_keypoints_filtered.confidences = top_confidences
 
+    @staticmethod
+    def _filter_patch_level_keypoints(kd: Keypoints):
+        keypoints = kd.patches_keypoints.normalised
+        confidences = kd.patches_keypoints.confidences
+        which_patch = kd.patches_keypoints.which_patch
+
+        count = min(config.dedode.filter.patches_sample_count, len(keypoints))
+
+        if keypoints is None or count == 0:
+            return
+
+        selected_indices = torch.multinomial(confidences, count, replacement=False)
+
+        top_keypoints = keypoints[selected_indices]
+        top_confidences = confidences[selected_indices]
+        top_which_patch = which_patch[selected_indices]
+
+        kd.patches_keypoints_filtered.normalised = top_keypoints
+        kd.patches_keypoints_filtered.confidences = top_confidences
+        kd.patches_keypoints_filtered.which_patch = top_which_patch
+
     def _filter_keypoints(self, kd: Keypoints):
         self._filter_image_level_keypoints(kd)
-        kd.image_keypoints.is_filtered = True
+        # kd.image_keypoints.is_filtered = True
+        self._filter_patch_level_keypoints(kd)
+        # kd.patches_keypoints.is_filtered = True
+
         kd.is_filtered = True
         kd.save()
 
