@@ -26,7 +26,7 @@ class DeDoDeDetector(KeypointDetector):
 
         logger.info('Loading DeDoDeDetector')
         from DeDoDe import dedode_detector_L
-        self.detector = dedode_detector_L(weights=None)
+        self.detector = dedode_detector_L(weights=None, remove_borders=True)
         logger.info('Loading DeDoDeDetector Done')
 
         self.normalizer = T.Normalize(

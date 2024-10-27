@@ -3,8 +3,8 @@ components:
     matcher: roma
 
 task:
-    name: basalt  # samples basalt
-    consider_samples: False # True False
+    name: samples  # samples basalt
+    consider_samples: True # True False
     track: MH_01_easy
     limit_count: 0
 
@@ -13,8 +13,8 @@ samples:
         reference: sacre_coeur_A.jpg
         target: sacre_coeur_B.jpg
     basalt:
-        reference: 1403715905934057984 
-        target: 1403715906284058112
+        reference: 1403636661163555584 
+        target: 1403636661513555456
 
 paths:
     ws_root: /home/stud/ath/ath_ws
@@ -31,17 +31,17 @@ paths:
 
 image:
     image_shape: [504, 504]
-    patch_shape: [84, 84]  # [42, 42] 
+    patch_shape: [84, 84]  # [42, 42]  [84, 84]
 
 dedode:
     batch_size: 6
     image_keypoints_count: 300
-    patch_keypoints_count: 3
+    patch_keypoints_count: 2
 
     filter:
         # weighted sampling
         images_sample_count: 100
-        patches_sample_count: 15
+        patches_sample_count: 10
 
 roma:
     filter:
