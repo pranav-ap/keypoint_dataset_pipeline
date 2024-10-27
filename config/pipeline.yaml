@@ -5,7 +5,7 @@ components:
 task:
     name: basalt  # samples basalt
     consider_samples: False # True False
-    track: V2_03_difficult
+    track: MH_01_easy
     limit_count: 0
 
 samples:
@@ -13,8 +13,8 @@ samples:
         reference: sacre_coeur_A.jpg
         target: sacre_coeur_B.jpg
     basalt:
-        reference: 1403715273612143104.png
-        target: 1403715273962142976.png
+        reference: 1403715905934057984 
+        target: 1403715906284058112
 
 paths:
     ws_root: /home/stud/ath/ath_ws

@@ -17,8 +17,8 @@ class DataPipeline:
     def get_image_names():
         if config.task.consider_samples:
             return [
-                config.samples[config.task.name].reference,
-                config.samples[config.task.name].target
+                str(config.samples[config.task.name].reference),
+                str(config.samples[config.task.name].target)
             ]
 
         df = pd.read_csv(config.paths[config.task.name].csv, header=None)
