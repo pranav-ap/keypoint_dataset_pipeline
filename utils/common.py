@@ -43,7 +43,7 @@ def make_clear_directory(directory_path):
         # Remove all contents of the directory
         shutil.rmtree(directory_path)
 
-    # Recreate the directory (optional, if you want to keep the directory itself)
+    # Recreate the directory
     os.makedirs(directory_path, exist_ok=True)
 
 

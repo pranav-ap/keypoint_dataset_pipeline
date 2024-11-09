@@ -37,20 +37,22 @@ class DataPipeline:
         logger.info(f'Matcher   : {config.components.matcher}')
         logger.info(f'Device    : {get_best_device()}')
 
-        os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline/')
+        project_root = '/home/stud/ath/ath_ws/keypoint_dataset_pipeline/'
+
+        os.chdir(project_root)
         image_names = self.get_image_names()
 
-        os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline/libs/DeDoDe')
+        os.chdir(f'{project_root}/libs/DeDoDe')
         detector = DeDoDeDetector()
         detector.extract_keypoints(image_names)
         del detector
 
-        os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline/libs/RoMa')
+        os.chdir(f'{project_root}/libs/RoMa')
         matcher = RoMaMatcher()
         matcher.extract_warp_certainty(image_names)
         del matcher
 
-        os.chdir('/home/stud/ath/ath_ws/keypoint_dataset_pipeline')
+        os.chdir(project_root)
         data_filter = DataFilter()
         data_filter.extract_good_matches(image_names)
         del data_filter

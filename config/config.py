@@ -7,7 +7,7 @@ config: DictConfig | None = None
 
 def setup_config():
     hydra.initialize(version_base=None, config_path=".")
-    cfg = hydra.compose("pipeline")
+    cfg = hydra.compose("config")
 
     # print(OmegaConf.to_yaml(cfg))
 

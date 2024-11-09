@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image
 from skimage.util import view_as_blocks
 from typing import List, Optional, Tuple, Dict
-from abc import ABC
+from abc import ABC, abstractmethod
 
 
 def load_tensor(filename: str) -> torch.tensor:
@@ -37,6 +37,18 @@ class _Keypoints(ABC):
 
         self.normalised: torch.Tensor = torch.empty(0, device=self.device)
         self.confidences: torch.Tensor = torch.empty(0, device=self.device)
+
+    @abstractmethod
+    def as_image_coords(self) -> List[cv2.KeyPoint]:
+        pass
+
+    @abstractmethod
+    def load(self):
+        pass
+
+    @abstractmethod
+    def save(self):
+        pass
 
 
 class ImageKeypoints(_Keypoints):
@@ -128,6 +140,7 @@ class Keypoints:
         self.image_path: str = f"{config.paths[config.task.name].images_dir}/{image_name}"
 
         if config.task.name == 'basalt':
+            self.image_path = f"{config.paths[config.task.name].images_dir}/{image_name}"
             self.image_path = f"{self.image_path}.png"
 
         self.image: Image.Image = self._init_image()
@@ -356,7 +369,8 @@ class Matches:
         ]
 
     def save_coords(self):
-        assert self.left_coords is not None and self.right_coords is not None
+        assert self.left_coords is not None
+        assert self.right_coords is not None
 
         filename = f"{self.a.image_name}_{self.b.image_name}_matches.pt"
 

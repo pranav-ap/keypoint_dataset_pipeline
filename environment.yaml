@@ -1,0 +1,19 @@
+name: kp_env
+channels:
+    - defaults
+    - conda-forge
+dependencies:
+    - python=3.12
+    - numpy
+    - pandas
+    - matplotlib
+    - pillow
+    - seaborn
+    - scikit-learn
+    - scikit-image
+    - opencv-python
+    - loguru
+    - tqdm
+    - hydra-core
+    - jupyterlab
+    - jupyter
