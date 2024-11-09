@@ -22,7 +22,9 @@ class DataPipeline:
             ]
 
         df = pd.read_csv(config.paths[config.task.name].csv, header=None)
-        image_names = df[0].astype(str)
+        # image_names = df[0].astype(str)
+        df['filename'] = df['filename'].str.replace(".png", "", regex=False)
+        image_names = df['filename'].tolist()
 
         if config.task.limit_count != 0:
             count = config.task.limit_count

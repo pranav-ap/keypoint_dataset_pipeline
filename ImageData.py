@@ -140,7 +140,6 @@ class Keypoints:
         self.image_path: str = f"{config.paths[config.task.name].images_dir}/{image_name}"
 
         if config.task.name == 'basalt':
-            self.image_path = f"{config.paths[config.task.name].images_dir}/{image_name}"
             self.image_path = f"{self.image_path}.png"
 
         self.image: Image.Image = self._init_image()
