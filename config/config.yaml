@@ -18,18 +18,20 @@ samples:
         target: 1403636661513555456
 
 paths:
-    ws_root: /home/stud/ath/ath_ws
-    project_root: ${paths.ws_root}/keypoint_dataset_pipeline
-    mav_root: ${paths.ws_root}/datasets/euroc/${task.track}/mav0/${task.cam}
+    roots:
+        ws: /home/stud/ath/ath_ws
+        mav: ${paths.roots.ws}/datasets/euroc/${task.track}/mav0
+        project: ${paths.roots.ws}/keypoint_dataset_pipeline
+        outputs: ${paths.roots.project}/outputs/${task.name}/${task.track}/${task.cam}
 
     samples:
         images_dir: ${paths.project_root}/data/samples/images
         tensors_dir: ${paths.project_root}/data/samples/tensors
     basalt:
-        csv: ${paths.mav_root}/data.csv
-        images_dir: ${paths.mav_root}/data
-        tensors_dir: ${paths.ws_root}/tensors/${task.name}/${task.track}/${task.cam}
-        zip_dir: ${paths.project_root}/zips/${task.name}/${task.track}/${task.cam}
+        csv: ${paths.roots.mav}/${task.cam}/data.csv
+        images_dir: ${paths.roots.mav}/${task.cam}/data
+        tensors_dir: ${paths.roots.project}/tensors/${task.name}/${task.track}/${task.cam}
+        zip_dir: ${paths.roots.project}/zips/${task.name}/${task.track}/${task.cam}
 
 image:
     image_shape: [504, 504]

@@ -1,6 +1,7 @@
-./libs
+libs/
 ./INSTRUCTIONS.md
-./scraps
+outputs/
+zips/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
