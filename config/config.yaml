@@ -3,9 +3,9 @@ components:
     matcher: roma
 
 task:
-    name: samples  # samples basalt
-    consider_samples: True # True False
-    limit_count: 0
+    name: basalt  # samples basalt
+    consider_samples: False # True False
+    limit_count: 10
     track: V1_01_easy
     cam: cam0 # cam0 cam1
 
@@ -22,16 +22,16 @@ paths:
         ws: /home/stud/ath/ath_ws
         mav: ${paths.roots.ws}/datasets/euroc/${task.track}/mav0
         project: ${paths.roots.ws}/keypoint_dataset_pipeline
-        outputs: ${paths.roots.project}/outputs/${task.name}/${task.track}/${task.cam}
+        output: ${paths.roots.project}/output
 
     samples:
-        images_dir: ${paths.project_root}/data/samples/images
-        tensors_dir: ${paths.project_root}/data/samples/tensors
+        images_dir: ${paths.roots.project}/data/samples/images
+        tensors_dir: ${paths.roots.output}/tensors/samples
     basalt:
         csv: ${paths.roots.mav}/${task.cam}/data.csv
         images_dir: ${paths.roots.mav}/${task.cam}/data
-        tensors_dir: ${paths.roots.project}/tensors/${task.name}/${task.track}/${task.cam}
-        zip_dir: ${paths.roots.project}/zips/${task.name}/${task.track}/${task.cam}
+        tensors_dir: ${paths.roots.output}/tensors/${task.name}/${task.track}/${task.cam}
+        zip_dir: ${paths.roots.output}/zips/${task.name}/${task.track}/${task.cam}
 
 image:
     image_shape: [504, 504]

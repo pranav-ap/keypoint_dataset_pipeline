@@ -1,6 +1,7 @@
 libs/
 ./INSTRUCTIONS.md
-outputs/
+output/
+tensors/
 zips/
 
 # Byte-compiled / optimized / DLL files
