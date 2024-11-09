@@ -1,6 +1,10 @@
-./libs
+libs/
 ./INSTRUCTIONS.md
-./scraps
+output/
+tensors/
+zips/
+
+.idea/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

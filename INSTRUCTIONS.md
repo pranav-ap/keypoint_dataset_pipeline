@@ -1,11 +1,5 @@
 # Instructions
 
-## Connect
-
-```commandline
-ssh ath@atcremers75.in.tum.de -p 58022
-```
-
 ## Install Miniconda
 
 ```commandline
@@ -26,7 +20,7 @@ git checkout ath
 ## Setup Environment
 
 ```commandline
-conda create -n kd_pipeline python=3.13
+conda create -n kd_pipeline python=3.12
 conda activate kd_pipeline 
 pip install -r requirements.txt
 python --version

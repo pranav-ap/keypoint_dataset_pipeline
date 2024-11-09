@@ -1,0 +1,57 @@
+components:
+    detector: dedode
+    matcher: roma
+
+task:
+    name: basalt  # samples basalt
+    consider_samples: True # True False
+    
+    # basalt related
+    
+    limit_count: 10
+    dataset: monado_slam # euroc monado_slam
+    track: MOO07/MOO07_mapping_easy  # V1_01_easy MOO07/MOO07_mapping_easy
+    cam: cam0 # cam0 cam1
+
+samples:
+    samples:
+        reference: sacre_coeur_A.jpg
+        target: sacre_coeur_B.jpg
+    basalt:
+        reference: 8657652230990
+        target: 8657685519990
+
+paths:
+    roots:
+        ws: /home/stud/ath/ath_ws
+        mav: ${paths.roots.ws}/datasets/${task.dataset}/${task.track}/mav0
+        project: ${paths.roots.ws}/keypoint_dataset_pipeline
+        output: ${paths.roots.project}/output
+
+    samples:
+        images_dir: ${paths.roots.project}/data/samples/images
+        tensors_dir: ${paths.roots.output}/tensors/samples
+    basalt:
+        csv: ${paths.roots.mav}/${task.cam}/data.csv
+        images_dir: ${paths.roots.mav}/${task.cam}/data
+        tensors_dir: ${paths.roots.output}/tensors/${task.name}/${task.track}/${task.cam}
+        zip_dir: ${paths.roots.output}/zips/${task.name}/${task.track}/${task.cam}
+
+image:
+    image_shape: [504, 504]
+    patch_shape: [84, 84]  # [42, 42]  [84, 84]
+
+dedode:
+    batch_size: 6
+    image_keypoints_count: 300
+    patch_keypoints_count: 2
+
+    filter:
+        # weighted sampling
+        images_sample_count: 100
+        patches_sample_count: 10
+
+roma:
+    filter:
+        # keep matches over the absolute confidence threshold
+        confidence_threshold: 0.6
