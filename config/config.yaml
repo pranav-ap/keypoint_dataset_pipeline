@@ -4,9 +4,13 @@ components:
 
 task:
     name: basalt  # samples basalt
-    consider_samples: False # True False
+    consider_samples: True # True False
+    
+    # basalt related
+    
     limit_count: 10
-    track: V1_01_easy
+    dataset: monado_slam # euroc monado_slam
+    track: MOO07/MOO07_mapping_easy  # V1_01_easy MOO07/MOO07_mapping_easy
     cam: cam0 # cam0 cam1
 
 samples:
@@ -14,13 +18,13 @@ samples:
         reference: sacre_coeur_A.jpg
         target: sacre_coeur_B.jpg
     basalt:
-        reference: 1403636661163555584
-        target: 1403636661513555456
+        reference: 8657652230990
+        target: 8657685519990
 
 paths:
     roots:
         ws: /home/stud/ath/ath_ws
-        mav: ${paths.roots.ws}/datasets/euroc/${task.track}/mav0
+        mav: ${paths.roots.ws}/datasets/${task.dataset}/${task.track}/mav0
         project: ${paths.roots.ws}/keypoint_dataset_pipeline
         output: ${paths.roots.project}/output
 

@@ -12,14 +12,21 @@ from abc import ABC, abstractmethod
 
 def load_tensor(filename: str) -> torch.tensor:
     filepath: str = os.path.join(config.paths[config.task.name].tensors_dir, filename)
-    assert os.path.exists(filepath)
+    if config.task.consider_samples:
+        filepath = os.path.join(config.paths.samples.tensors_dir, filename)
+    
+    assert os.path.exists(filepath), f'Not Found {filepath}'
     tensor: torch.tensor = torch.load(filepath, weights_only=True)
     return tensor
 
 
 def save_tensor(tensor: torch.tensor, filename: str):
     assert tensor is not None
+
     filepath = os.path.join(config.paths[config.task.name].tensors_dir, filename)
+    if config.task.consider_samples:
+        filepath = os.path.join(config.paths.samples.tensors_dir, filename)
+
     torch.save(tensor, filepath)
 
 
