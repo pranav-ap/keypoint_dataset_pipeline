@@ -8,26 +8,64 @@ from PIL import Image
 from skimage.util import view_as_blocks
 from typing import List, Optional, Tuple, Dict
 from abc import ABC, abstractmethod
+import h5py
 
 
-def load_tensor(filename: str) -> torch.tensor:
-    filepath: str = os.path.join(config.paths[config.task.name].tensors_dir, filename)
-    if config.task.consider_samples:
-        filepath = os.path.join(config.paths.samples.tensors_dir, filename)
-    
-    assert os.path.exists(filepath), f'Not Found {filepath}'
-    tensor: torch.tensor = torch.load(filepath, weights_only=True)
-    return tensor
+class DataStore:
+    def __init__(self):
+        mode = 'w'
 
+        filepath = 'inter.hdf5' if not config.task.consider_samples else 'inter_samples.hdf5'
+        self._file_inter = h5py.File(filepath, mode)
 
-def save_tensor(tensor: torch.tensor, filename: str):
-    assert tensor is not None
+        self._detector = self._file_inter.create_group('detector')
+        self._matcher = self._file_inter.create_group('matcher')
+        self._filter = self._file_inter.create_group('filter')
 
-    filepath = os.path.join(config.paths[config.task.name].tensors_dir, filename)
-    if config.task.consider_samples:
-        filepath = os.path.join(config.paths.samples.tensors_dir, filename)
+        filepath = 'results.hdf5' if not config.task.consider_samples else 'results_samples.hdf5'
+        self._file_results = h5py.File(filepath, 'a')
 
-    torch.save(tensor, filepath)
+        self._results_matches = self._file_results.create_group('matches')
+
+        """
+        Detector
+        """
+
+        self.detector_image_level_normalised = self._detector.create_group('/image_level/normalised')
+        self.detector_image_level_confidences = self._detector.create_group('/image_level/confidences')
+
+        self.detector_patch_level_normalised = self._detector.create_group('/patch_level/normalised')
+        self.detector_patch_level_confidences = self._detector.create_group('/patch_level/confidences')
+        self.detector_patch_level_which_patch = self._detector.create_group('/patch_level/which_patch')
+
+        """
+        Matcher
+        """
+
+        self.matcher_warp = self._matcher.create_group('warp')
+        self.matcher_certainty = self._matcher.create_group('certainty')
+
+        """
+        Filter
+        """
+
+        self.filter_image_level_normalised = self._filter.create_group('/image_level/normalised')
+        self.filter_image_level_confidences = self._filter.create_group('/image_level/confidences')
+
+        self.filter_patch_level_normalised = self._filter.create_group('/patch_level/normalised')
+        self.filter_patch_level_confidences = self._filter.create_group('/patch_level/confidences')
+        self.filter_patch_level_which_patch = self._filter.create_group('/patch_level/which_patch')
+
+        """
+        Results
+        """
+
+        self.results_reference_coords = self._results_matches.create_group('reference_coords')
+        self.results_target_coords = self._results_matches.create_group('target_coords')
+
+    def close(self):
+        self._file_inter.close()
+        self._file_results.close()
 
 
 """
@@ -49,13 +87,23 @@ class _Keypoints(ABC):
     def as_image_coords(self) -> List[cv2.KeyPoint]:
         pass
 
-    @abstractmethod
-    def load(self):
-        pass
+    def load(self, data_store):
+        normalised = data_store.filter_image_level_normalised[self.image_name][()] if self.is_filtered else data_store.detector_image_level_normalised[self.image_name][()]
+        self.normalised = torch.from_array(normalised)
 
-    @abstractmethod
-    def save(self):
-        pass
+        confidences = data_store.filter_image_level_confidences[self.image_name][()] if self.is_filtered else data_store.detector_image_level_confidences[self.image_name][()]
+        self.confidences = torch.from_array(confidences)
+
+    def save(self, data_store):
+        assert self.normalised is not None
+        g = data_store.filter_image_level_normalised if self.is_filtered else data_store.detector_image_level_normalised
+        data = self.normalised.cpu().numpy()
+        g.create_dataset(self.image_name, data=data)
+
+        assert self.confidences is not None
+        g = data_store.filter_image_level_confidences if self.is_filtered else data_store.detector_image_level_confidences
+        data = self.confidences.cpu().numpy()
+        g.create_dataset(self.image_name, data=data)
 
 
 class ImageKeypoints(_Keypoints):
@@ -79,20 +127,6 @@ class ImageKeypoints(_Keypoints):
 
         return coords
 
-    def load(self):
-        filename = f"{self.image_name}_keypoints_normalised.pt" if not self.is_filtered else f"{self.image_name}_keypoints_normalised_filtered.pt"
-        self.normalised = load_tensor(filename)
-
-        filename = f"{self.image_name}_confidences.pt" if not self.is_filtered else f"{self.image_name}_confidences_filtered.pt"
-        self.confidences = load_tensor(filename)
-
-    def save(self):
-        filename = f"{self.image_name}_keypoints_normalised.pt" if not self.is_filtered else f"{self.image_name}_keypoints_normalised_filtered.pt"
-        save_tensor(self.normalised, filename)
-
-        filename = f"{self.image_name}_confidences.pt" if not self.is_filtered else f"{self.image_name}_confidences_filtered.pt"
-        save_tensor(self.confidences, filename)
-
 
 class PatchesKeypoints(_Keypoints):
     def __init__(self, image_name, is_filtered=False):
@@ -115,28 +149,19 @@ class PatchesKeypoints(_Keypoints):
 
         return coords
 
-    def load(self):
-        filename = f"{self.image_name}_keypoints_normalised_patches.pt" if not self.is_filtered else f"{self.image_name}_keypoints_normalised_patches_filtered.pt"
-        self.normalised = load_tensor(filename)
+    def load(self, data_store):
+        super().load(data_store)
 
-        filename = f"{self.image_name}_confidences_patches.pt" if not self.is_filtered else f"{self.image_name}_confidences_patches_filtered.pt"
-        self.confidences = load_tensor(filename)
+        which_patch = data_store.filter_patch_level_which_patch[self.image_name][()] if self.is_filtered else data_store.detector_patch_level_which_patch[self.image_name][()]
+        self.which_patch = [(int(x), int(y)) for x, y in which_patch]
 
-        filename = f"{self.image_name}_which_patch.pt" if not self.is_filtered else f"{self.image_name}_which_patch_filtered.pt"
-        which_patch_tensor = load_tensor(filename)
-        which_patch = [(int(x), int(y)) for x, y in which_patch_tensor]
-        self.which_patch = which_patch
+    def save(self, data_store):
+        super().save(data_store)
 
-    def save(self):
-        filename = f"{self.image_name}_keypoints_normalised_patches.pt" if not self.is_filtered else f"{self.image_name}_keypoints_normalised_patches_filtered.pt"
-        save_tensor(self.normalised, filename)
-
-        filename = f"{self.image_name}_confidences_patches.pt" if not self.is_filtered else f"{self.image_name}_confidences_patches_filtered.pt"
-        save_tensor(self.confidences, filename)
-
-        filename = f"{self.image_name}_which_patch.pt" if not self.is_filtered else f"{self.image_name}_which_patch_filtered.pt"
-        which_patch = torch.tensor(self.which_patch)
-        save_tensor(which_patch, filename)
+        assert self.which_patch is not None
+        g = data_store.filter_patch_level_which_patch if self.is_filtered else data_store.detector_patch_level_which_patch
+        data = self.which_patch
+        g.create_dataset(self.image_name, data=data)
 
 
 class Keypoints:
@@ -363,53 +388,47 @@ class Matches:
     Load & Save
     """
 
-    def load(self):
-        filename = f"{self.a.image_name}_{self.b.image_name}_warp.pt"
-        warp = load_tensor(filename)
+    def load(self, data_store: DataStore):
+        pair_name = f"{self.a.image_name}_{self.b.image_name}"
+
+        warp = data_store.matcher_warp[pair_name][()]
+        warp = torch.from_array(warp)
         self.set_warp(warp)
 
-        filename = f"{self.a.image_name}_{self.b.image_name}_certainty.pt"
-        self.certainty = load_tensor(filename)
+        self.certainty = data_store.matcher_certainty[pair_name][()]
 
-    def save(self):
-        filename = f"{self.a.image_name}_{self.b.image_name}_warp.pt"
-        save_tensor(self.warp, filename)
+    def save(self, data_store: DataStore):
+        pair_name = f"{self.a.image_name}_{self.b.image_name}"
 
-        filename = f"{self.a.image_name}_{self.b.image_name}_certainty.pt"
-        save_tensor(self.certainty, filename)
+        assert self.warp is not None
+        g = data_store.matcher_warp
+        data = self.warp.cpu().numpy()
+        g.create_dataset(pair_name, data=data)
 
-    def load_coords(self):
-        filename = f"{self.a.image_name}_{self.b.image_name}_matches.pt"
-        matches = load_tensor(filename)
+        assert self.certainty is not None
+        g = data_store.matcher_certainty
+        data = self.certainty.cpu().numpy()
+        g.create_dataset(pair_name, data=data)
 
+    def load_coords(self, data_store: DataStore):
+        pair_name = f"{self.a.image_name}_{self.b.image_name}"
+
+        left_coords = data_store.results_reference_coords[pair_name][()]
         self.left_coords = [
             cv2.KeyPoint(int(x), int(y), 1.)
-            for x, y in matches[:, :2]
+            for x, y in left_coords
         ]
 
+        right_coords = data_store.results_target_coords[pair_name][()]
         self.right_coords = [
             cv2.KeyPoint(int(x), int(y), 1.)
-            for x, y in matches[:, 2:]
+            for x, y in right_coords
         ]
 
-    def save_coords_normal(self):
+    def save_coords(self, data_store: DataStore):
         assert self.left_coords is not None
         assert self.right_coords is not None
 
-        filename = f"{self.a.image_name}_{self.b.image_name}_matches.pt"
-
-        left_coords = torch.tensor([kp.pt for kp in self.left_coords])
-        right_coords = torch.tensor([kp.pt for kp in self.right_coords])
-
-        matches = torch.cat([left_coords, right_coords], dim=1)
-        save_tensor(matches, filename)
-
-    def save_coords(self):
-        assert self.left_coords is not None
-        assert self.right_coords is not None
-
-        filename = f"{self.a.image_name}_{self.b.image_name}_matches.pt"
-        
         current_width, current_height = config.image.image_shape
         new_width, new_height = config.image.original_image_shape
 
@@ -419,9 +438,15 @@ class Matches:
             kp = round(new_x), round(new_y)
             return kp
 
-        left_coords = torch.tensor([resize_coordinates(kp.pt[0], kp.pt[1]) for kp in self.left_coords])
-        right_coords = torch.tensor([resize_coordinates(kp.pt[0], kp.pt[1]) for kp in self.right_coords])
+        left_coords = np.array([resize_coordinates(kp.pt[0], kp.pt[1]) for kp in self.left_coords])
+        right_coords = np.array([resize_coordinates(kp.pt[0], kp.pt[1]) for kp in self.right_coords])
 
-        matches = torch.cat([left_coords, right_coords], dim=1)
-        save_tensor(matches, filename)
-        
+        pair_name = f"{self.a.image_name}_{self.b.image_name}"
+
+        g = data_store.results_reference_coords
+        data = left_coords
+        g.create_dataset(pair_name, data=data)
+
+        g = data_store.results_target_coords
+        data = right_coords
+        g.create_dataset(pair_name, data=data)

@@ -3,12 +3,18 @@ from utils import get_best_device, logger
 from ImageData import Keypoints, Matches
 from typing import Optional
 from tqdm import tqdm
+from abc import ABC
 
 
-class RoMaMatcher:
-    def __init__(self):
-        super().__init__()
+class KeypointMatcher(ABC):
+    def __init__(self, data_store):
         self.device = get_best_device()
+        self.data_store = data_store
+
+
+class RoMaMatcher(KeypointMatcher):
+    def __init__(self, data_store):
+        super().__init__(data_store)
 
         logger.info('Loading RoMaMatcher')
 

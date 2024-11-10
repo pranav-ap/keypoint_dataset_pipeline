@@ -11,8 +11,9 @@ from tqdm import tqdm
 
 
 class KeypointDetector(ABC):
-    def __init__(self):
+    def __init__(self, data_store):
         self.device = get_best_device()
+        self.data_store = data_store
 
     @abstractmethod
     def extract_keypoints(self, image_names):
@@ -20,8 +21,8 @@ class KeypointDetector(ABC):
 
 
 class DeDoDeDetector(KeypointDetector):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, data_store):
+        super().__init__(data_store)
 
         logger.info('Loading DeDoDeDetector')
         from DeDoDe import dedode_detector_L
@@ -104,4 +105,4 @@ class DeDoDeDetector(KeypointDetector):
             self._patches_detect(kds)
 
             for kd in kds:
-                kd.save()
+                kd.save(self.data_store)

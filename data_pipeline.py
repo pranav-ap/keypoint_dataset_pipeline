@@ -1,5 +1,6 @@
 from config import config
 from utils import get_best_device, zip_folder, logger, make_clear_directory
+from ImageData import DataStore
 from detectors import DeDoDeDetector
 from matchers import RoMaMatcher
 from DataFilter import DataFilter
@@ -11,6 +12,7 @@ import os
 class DataPipeline:
     def __init__(self):
         self.device = get_best_device()
+        self.data_store = DataStore()
 
         if config.task.name != 'samples' or not config.task.consider_samples:
             make_clear_directory(config.paths[config.task.name].tensors_dir)
@@ -55,17 +57,17 @@ class DataPipeline:
         image_names = self.get_image_names()
 
         os.chdir(f'{project_root}/libs/DeDoDe')
-        detector = DeDoDeDetector()
+        detector = DeDoDeDetector(self.data_store)
         detector.extract_keypoints(image_names)
         del detector
 
         os.chdir(f'{project_root}/libs/RoMa')
-        matcher = RoMaMatcher()
+        matcher = RoMaMatcher(self.data_store)
         matcher.extract_warp_certainty(image_names)
         del matcher
 
         os.chdir(project_root)
-        data_filter = DataFilter()
+        data_filter = DataFilter(self.data_store)
         data_filter.extract_good_matches(image_names)
         del data_filter
 
@@ -80,3 +82,5 @@ class DataPipeline:
 
             config_filename = f'{zipdir}/current_config.yaml'
             OmegaConf.save(config, config_filename)
+
+        self.data_store.close()
