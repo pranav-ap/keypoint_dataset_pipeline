@@ -4,7 +4,7 @@ components:
 
 task:
     name: basalt  # samples basalt
-    consider_samples: True # True False
+    consider_samples: False # True False
     
     # basalt related
     
@@ -23,7 +23,7 @@ samples:
 
 paths:
     roots:
-        ws: /home/stud/ath/ath_ws
+        ws: D:/thesis_code # /home/stud/ath/ath_ws  D:/thesis_code
         mav: ${paths.roots.ws}/datasets/${task.dataset}/${task.track}/mav0
         project: ${paths.roots.ws}/keypoint_dataset_pipeline
         output: ${paths.roots.project}/output
@@ -37,8 +37,9 @@ paths:
         output: ${paths.roots.output}/${task.name}/${task.track}/${task.cam}
 
 image:
-    original_image_shape: [640, 480]  # [752, 480] [640, 480] [2040, 1530] 
-    image_shape: [504, 504] # [504, 504] [width, height]
+    # [width, height]
+    original_image_shape: [640, 480]  # [640, 480]
+    image_shape: [504, 504] # [504, 504]
     patch_shape: [84, 84]  # [42, 42]  [84, 84]
 
 dedode:

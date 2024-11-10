@@ -22,7 +22,8 @@ class RoMaMatcher(KeypointMatcher):
         from romatch import roma_outdoor
         self.model = roma_outdoor(
             device=self.device,
-            upsample_res=config.image.image_shape
+            # (height, width)
+            upsample_res=(config.image.image_shape[1], config.image.image_shape[0])
         )
 
         self.model.symmetric = False

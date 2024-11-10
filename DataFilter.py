@@ -65,23 +65,22 @@ class DataFilter:
     def _filter_matches(pair: Matches, reference_keypoints_coords):
         threshold = config.roma.filter.confidence_threshold
 
-        left_coords, right_coords = pair.get_good_matches(
+        small_left_coords, small_right_coords = pair.get_good_matches(
             reference_keypoints_coords,
             threshold
         )
 
-        assert len(left_coords) == len(right_coords)
+        assert len(small_left_coords) == len(small_right_coords)
         # logger.info(f'Good Matches : {len(right_coords)}')
 
-        pair.left_coords = left_coords
-        pair.right_coords = right_coords
+        pair.small_left_coords = small_left_coords
+        pair.small_right_coords = small_right_coords
 
     def extract_good_matches(self, image_names):
         a: Optional[Keypoints] = None
         top_keypoints = None
 
         for index, (name_a, name_b) in tqdm(enumerate(zip(image_names, image_names[1:])), desc="Extracting matches", ncols=100, total=len(image_names) - 1):
-            # logger.info(f'Data Filter {name_a, name_b}')
             if a is None:
                 a = Keypoints.load_from_name(name_a, self.data_store)
                 top_keypoints = self._filter_keypoints(a)

@@ -1,5 +1,5 @@
 from config import config
-from utils import logger, get_best_device, make_clear_directory
+from utils import logger, get_best_device
 import cv2
 import os
 import torch
@@ -13,8 +13,8 @@ import h5py
 
 class DataStore:
     def __init__(self, mode='a'):
-        assert mode == 'r' or mode =='a'
-        
+        assert mode == 'r' or mode == 'a'
+
         filename_inter = 'inter.hdf5'
         filepath_inter = f'{config.paths[config.task.name].output}/{filename_inter}'
         self._file_inter = h5py.File(filepath_inter, mode)
@@ -56,9 +56,11 @@ class DataStore:
         self.filter_patch_level_which_patch = self._filter.create_group('patch_level/which_patch')
 
         # Setup results subgroups
-        self.results_reference_coords = self._results_matches.create_group('reference_coords')
-        self.results_target_coords = self._results_matches.create_group('target_coords')
-    
+        self.results_original_reference_coords = self._results_matches.create_group('original/reference_coords')
+        self.results_original_target_coords = self._results_matches.create_group('original/target_coords')
+        self.results_small_reference_coords = self._results_matches.create_group('small/reference_coords')
+        self.results_small_target_coords = self._results_matches.create_group('small/target_coords')
+
     def _init_groups_read_mode(self):
         # Create groups in the interaction file
         self._detector = self._file_inter['detector']
@@ -87,8 +89,10 @@ class DataStore:
         self.filter_patch_level_which_patch = self._filter['patch_level/which_patch']
 
         # Setup results subgroups
-        self.results_reference_coords = self._results_matches['reference_coords']
-        self.results_target_coords = self._results_matches['target_coords']
+        self.results_original_reference_coords = self._results_matches['original/reference_coords']
+        self.results_original_target_coords = self._results_matches['original/target_coords']
+        self.results_small_reference_coords = self._results_matches['small/reference_coords']
+        self.results_small_target_coords = self._results_matches['small/target_coords']
 
     def close(self):
         self._file_inter.close()
@@ -145,22 +149,24 @@ class ImageKeypoints(_Keypoints):
         return coords
 
     def load(self, data_store):
-        normalised = data_store.filter_image_level_normalised[self.image_name][()] if self.is_filtered else data_store.detector_image_level_normalised[self.image_name][()]
+        normalised = data_store.filter_image_level_normalised[self.image_name][()] if self.is_filtered else \
+            data_store.detector_image_level_normalised[self.image_name][()]
         self.normalised = torch.from_numpy(normalised)
 
-        confidences = data_store.filter_image_level_confidences[self.image_name][()] if self.is_filtered else data_store.detector_image_level_confidences[self.image_name][()]
+        confidences = data_store.filter_image_level_confidences[self.image_name][()] if self.is_filtered else \
+            data_store.detector_image_level_confidences[self.image_name][()]
         self.confidences = torch.from_numpy(confidences)
 
     def save(self, data_store):
         assert self.normalised is not None
         g = data_store.filter_image_level_normalised if self.is_filtered else data_store.detector_image_level_normalised
-        if not self.image_name in g:
+        if self.image_name not in g:
             data = self.normalised.cpu().numpy()
             g.create_dataset(self.image_name, data=data)
 
         assert self.confidences is not None
         g = data_store.filter_image_level_confidences if self.is_filtered else data_store.detector_image_level_confidences
-        if not self.image_name in g:
+        if self.image_name not in g:
             data = self.confidences.cpu().numpy()
             g.create_dataset(self.image_name, data=data)
 
@@ -187,31 +193,34 @@ class PatchesKeypoints(_Keypoints):
         return coords
 
     def load(self, data_store):
-        normalised = data_store.filter_patch_level_normalised[self.image_name][()] if self.is_filtered else data_store.detector_patch_level_normalised[self.image_name][()]
+        normalised = data_store.filter_patch_level_normalised[self.image_name][()] if self.is_filtered else \
+            data_store.detector_patch_level_normalised[self.image_name][()]
         self.normalised = torch.from_numpy(normalised)
 
-        confidences = data_store.filter_patch_level_confidences[self.image_name][()] if self.is_filtered else data_store.detector_patch_level_confidences[self.image_name][()]
+        confidences = data_store.filter_patch_level_confidences[self.image_name][()] if self.is_filtered else \
+            data_store.detector_patch_level_confidences[self.image_name][()]
         self.confidences = torch.from_numpy(confidences)
 
-        which_patch = data_store.filter_patch_level_which_patch[self.image_name][()] if self.is_filtered else data_store.detector_patch_level_which_patch[self.image_name][()]
+        which_patch = data_store.filter_patch_level_which_patch[self.image_name][()] if self.is_filtered else \
+            data_store.detector_patch_level_which_patch[self.image_name][()]
         self.which_patch = [(int(x), int(y)) for x, y in which_patch]
 
     def save(self, data_store):
         assert self.normalised is not None
         g = data_store.filter_patch_level_normalised if self.is_filtered else data_store.detector_patch_level_normalised
-        if not self.image_name in g:
+        if self.image_name not in g:
             data = self.normalised.cpu().numpy()
             g.create_dataset(self.image_name, data=data)
 
         assert self.confidences is not None
         g = data_store.filter_patch_level_confidences if self.is_filtered else data_store.detector_patch_level_confidences
-        if not self.image_name in g:
+        if self.image_name not in g:
             data = self.confidences.cpu().numpy()
             g.create_dataset(self.image_name, data=data)
 
         assert self.which_patch is not None
         g = data_store.filter_patch_level_which_patch if self.is_filtered else data_store.detector_patch_level_which_patch
-        if not self.image_name in g:
+        if self.image_name not in g:
             data = self.which_patch
             g.create_dataset(self.image_name, data=data)
 
@@ -241,7 +250,7 @@ class Keypoints:
             patch_images, patches_shape = self._init_grid_patches()
             self.patch_images: Dict[Tuple[int, int], Image.Image] = patch_images
             self.patches_shape: Tuple[int, int] = patches_shape
-    
+
             self.patches_keypoints = PatchesKeypoints(self.image_name, is_filtered=False)
             self.patches_keypoints_filtered = PatchesKeypoints(self.image_name, is_filtered=True)
 
@@ -332,7 +341,7 @@ class Keypoints:
 
         if self.is_filtered:
             self.image_keypoints_filtered.load(data_store)
-            
+
             if self.patches_keypoints_filtered:
                 self.patches_keypoints_filtered.load(data_store)
 
@@ -363,8 +372,11 @@ class Matches:
         self.pixel_coords: Optional[torch.tensor] = None
         self.certainty: Optional[torch.tensor] = None
 
-        self.left_coords: Optional[List[cv2.KeyPoint]] = None
-        self.right_coords: Optional[List[cv2.KeyPoint]] = None
+        self.small_left_coords: Optional[List[cv2.KeyPoint]] = None
+        self.small_right_coords: Optional[List[cv2.KeyPoint]] = None
+
+        self.original_left_coords: Optional[List[cv2.KeyPoint]] = None
+        self.original_right_coords: Optional[List[cv2.KeyPoint]] = None
 
     @staticmethod
     def load_from_names(name_a, name_b, data_store, load_coords=False, no_patches=False, must_resize=True):
@@ -454,54 +466,81 @@ class Matches:
 
         assert self.warp is not None
         g = data_store.matcher_warp
-        if not pair_name in g:
+        if pair_name not in g:
             data = self.warp.cpu().numpy()
             g.create_dataset(pair_name, data=data)
 
         assert self.certainty is not None
         g = data_store.matcher_certainty
-        data = self.certainty.cpu().numpy()
-        g.create_dataset(pair_name, data=data)
+        if pair_name not in g:
+            data = self.certainty.cpu().numpy()
+            g.create_dataset(pair_name, data=data)
 
     def load_coords(self, data_store: DataStore):
         pair_name = f"{self.a.image_name}_{self.b.image_name}"
 
-        left_coords = data_store.results_reference_coords[pair_name][()]
-        self.left_coords = [
+        small_left_coords = data_store.results_small_reference_coords[pair_name][()]
+        self.small_left_coords = [
             cv2.KeyPoint(int(x), int(y), 1.)
-            for x, y in left_coords
+            for x, y in small_left_coords
         ]
 
-        right_coords = data_store.results_target_coords[pair_name][()]
-        self.right_coords = [
+        small_right_coords = data_store.results_small_target_coords[pair_name][()]
+        self.small_right_coords = [
             cv2.KeyPoint(int(x), int(y), 1.)
-            for x, y in right_coords
+            for x, y in small_right_coords
+        ]
+
+        original_left_coords = data_store.results_original_reference_coords[pair_name][()]
+        self.original_left_coords = [
+            cv2.KeyPoint(int(x), int(y), 1.)
+            for x, y in original_left_coords
+        ]
+
+        original_right_coords = data_store.results_original_target_coords[pair_name][()]
+        self.original_right_coords = [
+            cv2.KeyPoint(int(x), int(y), 1.)
+            for x, y in original_right_coords
         ]
 
     def save_coords(self, data_store: DataStore):
-        assert self.left_coords is not None
-        assert self.right_coords is not None
+        assert self.small_left_coords is not None
+        assert self.small_right_coords is not None
 
         current_width, current_height = config.image.image_shape
-        new_width, new_height = config.image.original_image_shape
+        actual_image_width, actual_image_height = config.image.original_image_shape
 
-        def resize_coordinates(x, y):
-            new_x = x * (new_width / current_width)
-            new_y = y * (new_height / current_height)
-            kp = round(new_x), round(new_y)
+        # Calculate scaling factors for width and height
+        scale_x = actual_image_width / current_width
+        scale_y = actual_image_height / current_height
+
+        def resize_coordinates(kp):
+            x, y = kp.pt[0], kp.pt[1]
+            new_x = x * scale_x
+            new_y = y * scale_y
+            kp = new_x, new_y
             return kp
 
-        left_coords = np.array([resize_coordinates(kp.pt[0], kp.pt[1]) for kp in self.left_coords])
-        right_coords = np.array([resize_coordinates(kp.pt[0], kp.pt[1]) for kp in self.right_coords])
+        small_left_coords = np.array([(kp.pt[0], kp.pt[1]) for kp in self.small_left_coords])
+        small_right_coords = np.array([(kp.pt[0], kp.pt[1]) for kp in self.small_right_coords])
+
+        original_left_coords = np.array([resize_coordinates(kp) for kp in self.small_left_coords])
+        original_right_coords = np.array([resize_coordinates(kp) for kp in self.small_right_coords])
 
         pair_name = f"{self.a.image_name}_{self.b.image_name}"
 
-        g = data_store.results_reference_coords
-        if not pair_name in g:
-            data = left_coords
-            g.create_dataset(pair_name, data=data)
+        g = data_store.results_small_reference_coords
+        if pair_name not in g:
+            g.create_dataset(pair_name, data=small_left_coords)
 
-        g = data_store.results_target_coords
-        if not pair_name in g:
-            data = right_coords
-            g.create_dataset(pair_name, data=data)
+        g = data_store.results_small_target_coords
+        if pair_name not in g:
+            g.create_dataset(pair_name, data=small_right_coords)
+
+        g = data_store.results_original_reference_coords
+        if pair_name not in g:
+            g.create_dataset(pair_name, data=original_left_coords)
+
+        g = data_store.results_original_target_coords
+        if pair_name not in g:
+            g.create_dataset(pair_name, data=original_right_coords)

@@ -1,5 +1,5 @@
 from config import config
-from utils import get_best_device, zip_folder, logger, make_clear_directory
+from utils import get_best_device, logger, make_clear_directory
 from ImageData import DataStore
 from detectors import DeDoDeDetector
 from matchers import RoMaMatcher
@@ -12,6 +12,10 @@ import os
 class DataPipeline:
     def __init__(self):
         self.device = get_best_device()
+
+        if config.task.consider_samples:
+            config.paths[config.task.name].output = config.paths.samples.output
+
         make_clear_directory(config.paths[config.task.name].output)
         self.data_store = DataStore()
 
@@ -49,7 +53,8 @@ class DataPipeline:
         logger.info(f'Matcher   : {config.components.matcher}')
         logger.info(f'Device    : {get_best_device()}')
 
-        project_root = '/home/stud/ath/ath_ws/keypoint_dataset_pipeline/'
+        # project_root = '/home/stud/ath/ath_ws/keypoint_dataset_pipeline/'
+        project_root = 'D:/thesis_code/keypoint_dataset_pipeline/'
 
         os.chdir(project_root)
         image_names = self.get_image_names()

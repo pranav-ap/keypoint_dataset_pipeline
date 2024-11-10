@@ -7,7 +7,6 @@ dependencies:
     - pip
     - numpy
     - pandas
-    - tables
     - matplotlib
     - pillow
     - seaborn
@@ -18,6 +17,7 @@ dependencies:
     - hydra-core
     - jupyterlab
     - jupyter
+    - h5py
     - pip:
         - opencv-python
         
