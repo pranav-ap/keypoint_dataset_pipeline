@@ -3,7 +3,7 @@ components:
     matcher: roma
 
 task:
-    name: basalt  # samples basalt
+    name: samples  # samples basalt
     consider_samples: True # True False
     
     # basalt related

@@ -42,7 +42,7 @@ class DataPipeline:
 
         return image_names
 
-    def run(self):
+    def _run(self):
         logger.info(f'Keypoint Data Pipeline')
         logger.info(f'Task      : {config.task.name}')
         logger.info(f'Detector  : {config.components.detector}')
@@ -73,3 +73,10 @@ class DataPipeline:
         OmegaConf.save(config, config_filename)
 
         self.data_store.close()
+
+    def run(self):
+        try:
+            self._run()
+        finally:
+            self.data_store.close()
+            

@@ -12,20 +12,23 @@ import h5py
 
 
 class DataStore:
-    def __init__(self):
-        mode = 'a'
-
-        # Setup file paths
+    def __init__(self, mode='a'):
+        assert mode == 'r' or mode =='a'
+        
         filename_inter = 'inter.hdf5'
         filepath_inter = f'{config.paths[config.task.name].output}/{filename_inter}'
-        logger.info(f'DataStore Setup {filepath_inter}')
         self._file_inter = h5py.File(filepath_inter, mode)
 
         filename_results = 'results.hdf5'
         filepath_results = f'{config.paths[config.task.name].output}/{filename_results}'
-        logger.info(f'DataStore Setup {filepath_results}')
         self._file_results = h5py.File(filepath_results, mode)
 
+        if mode == 'r':
+            self._init_groups_read_mode()
+        else:
+            self._init_groups_append_mode()
+
+    def _init_groups_append_mode(self):
         # Create groups in the interaction file
         self._detector = self._file_inter.create_group('detector')
         self._matcher = self._file_inter.create_group('matcher')
@@ -55,6 +58,37 @@ class DataStore:
         # Setup results subgroups
         self.results_reference_coords = self._results_matches.create_group('reference_coords')
         self.results_target_coords = self._results_matches.create_group('target_coords')
+    
+    def _init_groups_read_mode(self):
+        # Create groups in the interaction file
+        self._detector = self._file_inter['detector']
+        self._matcher = self._file_inter['matcher']
+        self._filter = self._file_inter['filter']
+
+        # Create groups in the results file
+        self._results_matches = self._file_results['matches']
+
+        # Setup 'detector' subgroups
+        self.detector_image_level_normalised = self._detector['image_level/normalised']
+        self.detector_image_level_confidences = self._detector['image_level/confidences']
+        self.detector_patch_level_normalised = self._detector['patch_level/normalised']
+        self.detector_patch_level_confidences = self._detector['patch_level/confidences']
+        self.detector_patch_level_which_patch = self._detector['patch_level/which_patch']
+
+        # Setup 'matcher' subgroups
+        self.matcher_warp = self._matcher['warp']
+        self.matcher_certainty = self._matcher['certainty']
+
+        # Setup 'filter' subgroups
+        self.filter_image_level_normalised = self._filter['image_level/normalised']
+        self.filter_image_level_confidences = self._filter['image_level/confidences']
+        self.filter_patch_level_normalised = self._filter['patch_level/normalised']
+        self.filter_patch_level_confidences = self._filter['patch_level/confidences']
+        self.filter_patch_level_which_patch = self._filter['patch_level/which_patch']
+
+        # Setup results subgroups
+        self.results_reference_coords = self._results_matches['reference_coords']
+        self.results_target_coords = self._results_matches['target_coords']
 
     def close(self):
         self._file_inter.close()
@@ -81,11 +115,11 @@ class _Keypoints(ABC):
         pass
 
     @abstractmethod
-    def load(self, data_store):
+    def load(self, data_store: DataStore):
         pass
 
     @abstractmethod
-    def save(self, data_store):
+    def save(self, data_store: DataStore):
         pass
 
 
