@@ -8,7 +8,7 @@ task:
     
     # basalt related
     
-    limit_count: 10
+    limit_count: 4
     dataset: monado_slam # euroc monado_slam
     track: MOO07/MOO07_mapping_easy  # V1_01_easy MOO07/MOO07_mapping_easy
     cam: cam0 # cam0 cam1
@@ -34,7 +34,7 @@ paths:
     basalt:
         csv: ${paths.roots.mav}/${task.cam}/data.csv
         images: ${paths.roots.mav}/${task.cam}/data
-        output: ${paths.roots.output}/${task.name}/${task.dataset}/${task.track}/${task.cam}
+        output: ${paths.roots.output}/${task.name}/${task.dataset}/${task.track}
 
 image:
     # [width, height]

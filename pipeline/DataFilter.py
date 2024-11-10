@@ -55,7 +55,7 @@ class DataFilter:
         self._filter_patch_level_keypoints(kd)
 
         kd.is_filtered = True
-        kd.save(self.data_store)
+        kd.save()
 
         coords = kd.get_all_filtered_coords()
         # logger.info(f'Good Keypoints : {len(coords)}')
@@ -81,7 +81,8 @@ class DataFilter:
         a: Optional[Keypoints] = None
         top_keypoints = None
 
-        for index, (name_a, name_b) in tqdm(enumerate(zip(image_names, image_names[1:])), desc="Extracting matches", ncols=100, total=len(image_names) - 1):
+        for index, (name_a, name_b) in tqdm(enumerate(zip(image_names, image_names[1:])), desc="Extracting matches",
+                                            ncols=100, total=len(image_names) - 1):
             if a is None:
                 a = Keypoints.load_from_name(name_a, self.data_store)
                 top_keypoints = self._filter_keypoints(a)
@@ -89,12 +90,12 @@ class DataFilter:
             b = Keypoints.load_from_name(name_b, self.data_store)
 
             # Load matches data between a and b
-            pair = Matches(a, b)
-            pair.load(self.data_store)
+            pair = Matches(a, b, self.data_store)
+            pair.load()
 
             # Filter good matches based on top keypoints
             self._filter_matches(pair, top_keypoints)
-            pair.save_coords(self.data_store)
+            pair.save_coords()
 
             # Update for next iteration
             top_keypoints = self._filter_keypoints(b)

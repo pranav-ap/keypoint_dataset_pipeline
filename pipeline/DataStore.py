@@ -11,11 +11,11 @@ class DataStore:
         self.mode = mode
 
     def init(self):
-        filename_inter = 'inter.hdf5'
+        filename_inter = f'inter_{config.task.cam}.hdf5' if not config.task.consider_samples else 'inter.hdf5'
         filepath_inter = f'{config.paths[config.task.name].output}/{filename_inter}'
         self._file_inter = h5py.File(filepath_inter, self.mode)
 
-        filename_results = 'results.hdf5'
+        filename_results = f'results_{config.task.cam}.hdf5' if not config.task.consider_samples else 'results.hdf5'
         filepath_results = f'{config.paths[config.task.name].output}/{filename_results}'
         self._file_results = h5py.File(filepath_results, self.mode)
 

@@ -13,8 +13,9 @@ from .ImageData import Keypoints
 
 
 class KeypointDetector(ABC):
+    device = get_best_device()
+
     def __init__(self, data_store):
-        self.device = get_best_device()
         self.data_store = data_store
 
     @abstractmethod
@@ -93,18 +94,21 @@ class DeDoDeDetector(KeypointDetector):
         keypoints, confidences = self._detect(images, keypoint_count)
 
         for kd, wp, keys, confs in zip(which_image, which_patch, keypoints, confidences):
-            kd.patches_keypoints.normalised = torch.cat([kd.patches_keypoints.normalised, keys], dim=0) if kd.patches_keypoints.normalised.numel() > 0 else keys
-            kd.patches_keypoints.confidences = torch.cat([kd.patches_keypoints.confidences, confs], dim=0) if kd.patches_keypoints.confidences.numel() > 0 else confs
+            kd.patches_keypoints.normalised = torch.cat([kd.patches_keypoints.normalised, keys],
+                                                        dim=0) if kd.patches_keypoints.normalised.numel() > 0 else keys
+            kd.patches_keypoints.confidences = torch.cat([kd.patches_keypoints.confidences, confs],
+                                                         dim=0) if kd.patches_keypoints.confidences.numel() > 0 else confs
             kd.patches_keypoints.which_patch.extend([wp] * keys.shape[0])
 
     def extract_keypoints(self, image_names):
         chunk_size = config.dedode.batch_size
         total_chunks = (len(image_names) + chunk_size - 1) // chunk_size
 
-        for image_names_chunk in tqdm(chunk_iterable(image_names, chunk_size), total=total_chunks, desc="Extracting keypoints", ncols=100):
-            kds = [Keypoints(name, is_filtered=False) for name in image_names_chunk]
+        for image_names_chunk in tqdm(chunk_iterable(image_names, chunk_size), total=total_chunks,
+                                      desc="Extracting keypoints", ncols=100):
+            kds = [Keypoints(name, self.data_store, is_filtered=False) for name in image_names_chunk]
             self._images_detect(kds)
             self._patches_detect(kds)
 
             for kd in kds:
-                kd.save(self.data_store)
+                kd.save()

@@ -54,15 +54,10 @@ class DataPipeline:
         return image_names
 
     def _run(self):
-        make_clear_directory(config.paths[config.task.name].output)
-
         self.data_store.init()
 
         os.chdir(config.paths.roots.project)
         image_names = self.get_image_names()
-
-        config_filename = f'{config.paths[config.task.name].output}/config.yaml'
-        OmegaConf.save(config, config_filename)
 
         os.chdir(f'{config.paths.roots.project}/libs/DeDoDe')
         self.detector.extract_keypoints(image_names)
@@ -74,14 +69,22 @@ class DataPipeline:
         self.data_filter.extract_good_matches(image_names)
 
     def run(self):
+        logger.info('Data Pipeline has started running!')
+
         try:
-            if config.task.name == 'samples' or config.task.consider_samples:
+            make_clear_directory(config.paths[config.task.name].output)
+            config_filename = f'{config.paths[config.task.name].output}/config.yaml'
+            OmegaConf.save(config, config_filename)
+
+            if config.task.consider_samples:
                 self._run()
             else:
                 for cam in ['cam0', 'cam1']:
                     config.task.cam = cam
                     logger.info(f'Camera {cam}')
                     self._run()
+
         finally:
             self.data_store.close()
-            
+
+        logger.info('Data Pipeline has finished running!')

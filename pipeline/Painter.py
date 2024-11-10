@@ -14,6 +14,7 @@ class Painter:
             config.paths[config.task.name].output = config.paths.samples.output
 
         self.data_store = DataStore(mode='r')
+        self.data_store.init()
 
     @staticmethod
     def _to_image(image):
@@ -105,9 +106,10 @@ class Painter:
 
         return image_vis
 
-    def show_matches(self, name_a, name_b, confidence_threshold=0.6):
+    def show_matches(self, name_a, name_b):
         pair = Matches.load_from_names(name_a, name_b, self.data_store)
         coords = pair.a.image_keypoints.as_image_coords()
+        confidence_threshold = config.roma.filter.confidence_threshold
         left_coords, right_coords = pair.get_good_matches(coords, confidence_threshold)
         num_points = len(left_coords)
         logger.info(f'Number of Matches {num_points}')

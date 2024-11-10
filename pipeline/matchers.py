@@ -36,9 +36,9 @@ class RoMaMatcher(KeypointMatcher):
 
         for name_a, name_b in tqdm(zip(image_names, image_names[1:]), desc="Extracting warps", ncols=100, total=len(image_names) - 1):
             if a is None:
-                a = Keypoints(name_a)
+                a = Keypoints(name_a, self.data_store)
 
-            b = Keypoints(name_b)
+            b = Keypoints(name_b, self.data_store)
 
             # Match using model and retrieve warp and certainty
             warp, certainty = self.model.match(
@@ -47,10 +47,10 @@ class RoMaMatcher(KeypointMatcher):
             )
 
             # Set warp and certainty for the match pair
-            pair = Matches(a, b)
+            pair = Matches(a, b, self.data_store)
             pair.set_warp(warp)
             pair.certainty = certainty
-            pair.save(self.data_store)
+            pair.save()
 
             # Move forward
             a = b
