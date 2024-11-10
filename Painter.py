@@ -116,3 +116,28 @@ class Painter:
         logger.info(f'Number of Matches {num_points}')
 
         return Painter._show_matches(pair, pair.left_coords, pair.right_coords, num_points)
+
+    """
+    Original Image Functions
+    """
+    
+    @staticmethod
+    def show_matches_on_original_image(name_a, name_b):
+        current_width, current_height = config.image.image_shape
+        new_width, new_height = config.image.original_image_shape
+
+        def resize_coordinates(x, y):
+            new_x = x * (new_width / current_width)
+            new_y = y * (new_height / current_height)
+            kp = cv2.KeyPoint(round(new_x), round(new_y), 1)
+            return kp
+            
+        pair = Matches.load_from_names(name_a, name_b, load_coords=True, no_patches=True, must_resize=False)
+        num_points = len(pair.left_coords)
+        logger.info(f'Number of Matches {num_points}')
+
+        left_coords = [resize_coordinates(kp.pt[0], kp.pt[1]) for kp in pair.left_coords]
+        right_coords = [resize_coordinates(kp.pt[0], kp.pt[1]) for kp in pair.right_coords]
+
+        return Painter._show_matches(pair, left_coords, right_coords, num_points)
+

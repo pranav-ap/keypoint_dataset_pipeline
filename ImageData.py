@@ -140,8 +140,9 @@ class PatchesKeypoints(_Keypoints):
 
 
 class Keypoints:
-    def __init__(self, image_name, is_filtered=False):
+    def __init__(self, image_name, is_filtered=False, must_resize=True, no_patches=False):
         self.is_filtered = is_filtered
+        self.must_resize = must_resize
 
         self.image_name: str = str(image_name).strip()
         self.image_path: str = f"{config.paths[config.task.name].images_dir}/{image_name}"
@@ -151,22 +152,31 @@ class Keypoints:
 
         self.image: Image.Image = self._init_image()
 
-        patch_images, patches_shape = self._init_grid_patches()
-        self.patch_images: Dict[Tuple[int, int], Image.Image] = patch_images
-        self.patches_shape: Tuple[int, int] = patches_shape
-
         self.image_keypoints = ImageKeypoints(self.image_name, is_filtered=False)
-        self.patches_keypoints = PatchesKeypoints(self.image_name, is_filtered=False)
-
         self.image_keypoints_filtered = ImageKeypoints(self.image_name, is_filtered=True)
-        self.patches_keypoints_filtered = PatchesKeypoints(self.image_name, is_filtered=True)
+
+        self.patch_images = None
+        self.patches_shape = None
+        self.patches_keypoints = None
+        self.patches_keypoints_filtered = None
+
+        if not no_patches:
+            patch_images, patches_shape = self._init_grid_patches()
+            self.patch_images: Dict[Tuple[int, int], Image.Image] = patch_images
+            self.patches_shape: Tuple[int, int] = patches_shape
+    
+            self.patches_keypoints = PatchesKeypoints(self.image_name, is_filtered=False)
+            self.patches_keypoints_filtered = PatchesKeypoints(self.image_name, is_filtered=True)
 
     def _init_image(self):
         assert os.path.exists(self.image_path)
 
         image = Image.open(self.image_path)
         x, y = config.image.image_shape
-        image = image.resize((x, y))
+
+        if self.must_resize:
+            image = image.resize((x, y))
+
         image = image.convert('RGB')
 
         return image
@@ -194,8 +204,8 @@ class Keypoints:
         return grid_patches, grid_patches_shape
 
     @staticmethod
-    def load_from_name(image_name, is_filtered=False):
-        kd = Keypoints(image_name, is_filtered)
+    def load_from_name(image_name, is_filtered=False, no_patches=False, must_resize=True):
+        kd = Keypoints(image_name, is_filtered=is_filtered, no_patches=no_patches, must_resize=must_resize)
         kd.load()
         return kd
 
@@ -239,19 +249,27 @@ class Keypoints:
 
     def load(self):
         self.image_keypoints.load()
-        self.patches_keypoints.load()
+
+        if self.patches_keypoints:
+            self.patches_keypoints.load()
 
         if self.is_filtered:
             self.image_keypoints_filtered.load()
-            self.patches_keypoints_filtered.load()
+            
+            if self.patches_keypoints_filtered:
+                self.patches_keypoints_filtered.load()
 
     def save(self):
         self.image_keypoints.save()
-        self.patches_keypoints.save()
+
+        if self.patches_keypoints:
+            self.patches_keypoints.save()
 
         if self.is_filtered:
             self.image_keypoints_filtered.save()
-            self.patches_keypoints_filtered.save()
+
+            if self.patches_keypoints_filtered:
+                self.patches_keypoints_filtered.save()
 
 
 """
@@ -272,9 +290,9 @@ class Matches:
         self.right_coords: Optional[List[cv2.KeyPoint]] = None
 
     @staticmethod
-    def load_from_names(name_a, name_b, load_coords=False):
-        a = Keypoints.load_from_name(name_a)
-        b = Keypoints.load_from_name(name_b)
+    def load_from_names(name_a, name_b, load_coords=False, no_patches=False, must_resize=True):
+        a = Keypoints.load_from_name(name_a, no_patches=no_patches, must_resize=must_resize)
+        b = Keypoints.load_from_name(name_b, no_patches=no_patches, must_resize=must_resize)
 
         pair = Matches(a, b)
         pair.load()
@@ -374,7 +392,7 @@ class Matches:
             for x, y in matches[:, 2:]
         ]
 
-    def save_coords(self):
+    def save_coords_normal(self):
         assert self.left_coords is not None
         assert self.right_coords is not None
 
@@ -385,3 +403,25 @@ class Matches:
 
         matches = torch.cat([left_coords, right_coords], dim=1)
         save_tensor(matches, filename)
+
+    def save_coords(self):
+        assert self.left_coords is not None
+        assert self.right_coords is not None
+
+        filename = f"{self.a.image_name}_{self.b.image_name}_matches.pt"
+        
+        current_width, current_height = config.image.image_shape
+        new_width, new_height = config.image.original_image_shape
+
+        def resize_coordinates(x, y):
+            new_x = x * (new_width / current_width)
+            new_y = y * (new_height / current_height)
+            kp = round(new_x), round(new_y)
+            return kp
+
+        left_coords = torch.tensor([resize_coordinates(kp.pt[0], kp.pt[1]) for kp in self.left_coords])
+        right_coords = torch.tensor([resize_coordinates(kp.pt[0], kp.pt[1]) for kp in self.right_coords])
+
+        matches = torch.cat([left_coords, right_coords], dim=1)
+        save_tensor(matches, filename)
+        
