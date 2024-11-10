@@ -29,13 +29,12 @@ paths:
         output: ${paths.roots.project}/output
 
     samples:
-        images_dir: ${paths.roots.project}/data/samples/images
-        tensors_dir: ${paths.roots.output}/tensors/samples
+        images: ${paths.roots.project}/data/samples/images
+        output: ${paths.roots.output}/samples
     basalt:
         csv: ${paths.roots.mav}/${task.cam}/data.csv
-        images_dir: ${paths.roots.mav}/${task.cam}/data
-        tensors_dir: ${paths.roots.output}/tensors/${task.name}/${task.track}/${task.cam}
-        zip_dir: ${paths.roots.output}/zips/${task.name}/${task.track}/${task.cam}
+        images: ${paths.roots.mav}/${task.cam}/data
+        output: ${paths.roots.output}/${task.name}/${task.track}/${task.cam}
 
 image:
     original_image_shape: [640, 480]  # [752, 480] [640, 480]

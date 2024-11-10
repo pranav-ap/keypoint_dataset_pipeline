@@ -1,5 +1,5 @@
 from config import config
-from utils import logger, get_best_device
+from utils import logger, get_best_device, make_clear_directory
 import cv2
 import os
 import torch
@@ -13,53 +13,46 @@ import h5py
 
 class DataStore:
     def __init__(self):
-        mode = 'w'
+        mode = 'a'
 
-        filepath = 'inter.hdf5' if not config.task.consider_samples else 'inter_samples.hdf5'
-        self._file_inter = h5py.File(filepath, mode)
+        # Setup file paths
+        filename_inter = 'inter.hdf5'
+        filepath_inter = f'{config.paths[config.task.name].output}/{filename_inter}'
+        logger.info(f'DataStore Setup {filepath_inter}')
+        self._file_inter = h5py.File(filepath_inter, mode)
 
+        filename_results = 'results.hdf5'
+        filepath_results = f'{config.paths[config.task.name].output}/{filename_results}'
+        logger.info(f'DataStore Setup {filepath_results}')
+        self._file_results = h5py.File(filepath_results, mode)
+
+        # Create groups in the interaction file
         self._detector = self._file_inter.create_group('detector')
         self._matcher = self._file_inter.create_group('matcher')
         self._filter = self._file_inter.create_group('filter')
 
-        filepath = 'results.hdf5' if not config.task.consider_samples else 'results_samples.hdf5'
-        self._file_results = h5py.File(filepath, 'a')
-
+        # Create groups in the results file
         self._results_matches = self._file_results.create_group('matches')
 
-        """
-        Detector
-        """
+        # Setup 'detector' subgroups
+        self.detector_image_level_normalised = self._detector.create_group('image_level/normalised')
+        self.detector_image_level_confidences = self._detector.create_group('image_level/confidences')
+        self.detector_patch_level_normalised = self._detector.create_group('patch_level/normalised')
+        self.detector_patch_level_confidences = self._detector.create_group('patch_level/confidences')
+        self.detector_patch_level_which_patch = self._detector.create_group('patch_level/which_patch')
 
-        self.detector_image_level_normalised = self._detector.create_group('/image_level/normalised')
-        self.detector_image_level_confidences = self._detector.create_group('/image_level/confidences')
-
-        self.detector_patch_level_normalised = self._detector.create_group('/patch_level/normalised')
-        self.detector_patch_level_confidences = self._detector.create_group('/patch_level/confidences')
-        self.detector_patch_level_which_patch = self._detector.create_group('/patch_level/which_patch')
-
-        """
-        Matcher
-        """
-
+        # Setup 'matcher' subgroups
         self.matcher_warp = self._matcher.create_group('warp')
         self.matcher_certainty = self._matcher.create_group('certainty')
 
-        """
-        Filter
-        """
+        # Setup 'filter' subgroups
+        self.filter_image_level_normalised = self._filter.create_group('image_level/normalised')
+        self.filter_image_level_confidences = self._filter.create_group('image_level/confidences')
+        self.filter_patch_level_normalised = self._filter.create_group('patch_level/normalised')
+        self.filter_patch_level_confidences = self._filter.create_group('patch_level/confidences')
+        self.filter_patch_level_which_patch = self._filter.create_group('patch_level/which_patch')
 
-        self.filter_image_level_normalised = self._filter.create_group('/image_level/normalised')
-        self.filter_image_level_confidences = self._filter.create_group('/image_level/confidences')
-
-        self.filter_patch_level_normalised = self._filter.create_group('/patch_level/normalised')
-        self.filter_patch_level_confidences = self._filter.create_group('/patch_level/confidences')
-        self.filter_patch_level_which_patch = self._filter.create_group('/patch_level/which_patch')
-
-        """
-        Results
-        """
-
+        # Setup results subgroups
         self.results_reference_coords = self._results_matches.create_group('reference_coords')
         self.results_target_coords = self._results_matches.create_group('target_coords')
 
@@ -87,23 +80,13 @@ class _Keypoints(ABC):
     def as_image_coords(self) -> List[cv2.KeyPoint]:
         pass
 
+    @abstractmethod
     def load(self, data_store):
-        normalised = data_store.filter_image_level_normalised[self.image_name][()] if self.is_filtered else data_store.detector_image_level_normalised[self.image_name][()]
-        self.normalised = torch.from_array(normalised)
+        pass
 
-        confidences = data_store.filter_image_level_confidences[self.image_name][()] if self.is_filtered else data_store.detector_image_level_confidences[self.image_name][()]
-        self.confidences = torch.from_array(confidences)
-
+    @abstractmethod
     def save(self, data_store):
-        assert self.normalised is not None
-        g = data_store.filter_image_level_normalised if self.is_filtered else data_store.detector_image_level_normalised
-        data = self.normalised.cpu().numpy()
-        g.create_dataset(self.image_name, data=data)
-
-        assert self.confidences is not None
-        g = data_store.filter_image_level_confidences if self.is_filtered else data_store.detector_image_level_confidences
-        data = self.confidences.cpu().numpy()
-        g.create_dataset(self.image_name, data=data)
+        pass
 
 
 class ImageKeypoints(_Keypoints):
@@ -126,6 +109,26 @@ class ImageKeypoints(_Keypoints):
         ]
 
         return coords
+
+    def load(self, data_store):
+        normalised = data_store.filter_image_level_normalised[self.image_name][()] if self.is_filtered else data_store.detector_image_level_normalised[self.image_name][()]
+        self.normalised = torch.from_numpy(normalised)
+
+        confidences = data_store.filter_image_level_confidences[self.image_name][()] if self.is_filtered else data_store.detector_image_level_confidences[self.image_name][()]
+        self.confidences = torch.from_numpy(confidences)
+
+    def save(self, data_store):
+        assert self.normalised is not None
+        g = data_store.filter_image_level_normalised if self.is_filtered else data_store.detector_image_level_normalised
+        if not self.image_name in g:
+            data = self.normalised.cpu().numpy()
+            g.create_dataset(self.image_name, data=data)
+
+        assert self.confidences is not None
+        g = data_store.filter_image_level_confidences if self.is_filtered else data_store.detector_image_level_confidences
+        if not self.image_name in g:
+            data = self.confidences.cpu().numpy()
+            g.create_dataset(self.image_name, data=data)
 
 
 class PatchesKeypoints(_Keypoints):
@@ -150,18 +153,33 @@ class PatchesKeypoints(_Keypoints):
         return coords
 
     def load(self, data_store):
-        super().load(data_store)
+        normalised = data_store.filter_patch_level_normalised[self.image_name][()] if self.is_filtered else data_store.detector_patch_level_normalised[self.image_name][()]
+        self.normalised = torch.from_numpy(normalised)
+
+        confidences = data_store.filter_patch_level_confidences[self.image_name][()] if self.is_filtered else data_store.detector_patch_level_confidences[self.image_name][()]
+        self.confidences = torch.from_numpy(confidences)
 
         which_patch = data_store.filter_patch_level_which_patch[self.image_name][()] if self.is_filtered else data_store.detector_patch_level_which_patch[self.image_name][()]
         self.which_patch = [(int(x), int(y)) for x, y in which_patch]
 
     def save(self, data_store):
-        super().save(data_store)
+        assert self.normalised is not None
+        g = data_store.filter_patch_level_normalised if self.is_filtered else data_store.detector_patch_level_normalised
+        if not self.image_name in g:
+            data = self.normalised.cpu().numpy()
+            g.create_dataset(self.image_name, data=data)
+
+        assert self.confidences is not None
+        g = data_store.filter_patch_level_confidences if self.is_filtered else data_store.detector_patch_level_confidences
+        if not self.image_name in g:
+            data = self.confidences.cpu().numpy()
+            g.create_dataset(self.image_name, data=data)
 
         assert self.which_patch is not None
         g = data_store.filter_patch_level_which_patch if self.is_filtered else data_store.detector_patch_level_which_patch
-        data = self.which_patch
-        g.create_dataset(self.image_name, data=data)
+        if not self.image_name in g:
+            data = self.which_patch
+            g.create_dataset(self.image_name, data=data)
 
 
 class Keypoints:
@@ -170,7 +188,7 @@ class Keypoints:
         self.must_resize = must_resize
 
         self.image_name: str = str(image_name).strip()
-        self.image_path: str = f"{config.paths[config.task.name].images_dir}/{image_name}"
+        self.image_path: str = f"{config.paths[config.task.name].images}/{image_name}"
 
         if config.task.name == 'basalt':
             self.image_path = f"{self.image_path}.png"
@@ -229,9 +247,9 @@ class Keypoints:
         return grid_patches, grid_patches_shape
 
     @staticmethod
-    def load_from_name(image_name, is_filtered=False, no_patches=False, must_resize=True):
+    def load_from_name(image_name, data_store, is_filtered=False, no_patches=False, must_resize=True):
         kd = Keypoints(image_name, is_filtered=is_filtered, no_patches=no_patches, must_resize=must_resize)
-        kd.load()
+        kd.load(data_store)
         return kd
 
     """
@@ -272,29 +290,29 @@ class Keypoints:
     Load & Save
     """
 
-    def load(self):
-        self.image_keypoints.load()
+    def load(self, data_store):
+        self.image_keypoints.load(data_store)
 
         if self.patches_keypoints:
-            self.patches_keypoints.load()
+            self.patches_keypoints.load(data_store)
 
         if self.is_filtered:
-            self.image_keypoints_filtered.load()
+            self.image_keypoints_filtered.load(data_store)
             
             if self.patches_keypoints_filtered:
-                self.patches_keypoints_filtered.load()
+                self.patches_keypoints_filtered.load(data_store)
 
-    def save(self):
-        self.image_keypoints.save()
+    def save(self, data_store):
+        self.image_keypoints.save(data_store)
 
         if self.patches_keypoints:
-            self.patches_keypoints.save()
+            self.patches_keypoints.save(data_store)
 
         if self.is_filtered:
-            self.image_keypoints_filtered.save()
+            self.image_keypoints_filtered.save(data_store)
 
             if self.patches_keypoints_filtered:
-                self.patches_keypoints_filtered.save()
+                self.patches_keypoints_filtered.save(data_store)
 
 
 """
@@ -315,15 +333,15 @@ class Matches:
         self.right_coords: Optional[List[cv2.KeyPoint]] = None
 
     @staticmethod
-    def load_from_names(name_a, name_b, load_coords=False, no_patches=False, must_resize=True):
-        a = Keypoints.load_from_name(name_a, no_patches=no_patches, must_resize=must_resize)
-        b = Keypoints.load_from_name(name_b, no_patches=no_patches, must_resize=must_resize)
+    def load_from_names(name_a, name_b, data_store, load_coords=False, no_patches=False, must_resize=True):
+        a = Keypoints.load_from_name(name_a, data_store, no_patches=no_patches, must_resize=must_resize)
+        b = Keypoints.load_from_name(name_b, data_store, no_patches=no_patches, must_resize=must_resize)
 
         pair = Matches(a, b)
-        pair.load()
+        pair.load(data_store)
 
         if load_coords:
-            pair.load_coords()
+            pair.load_coords(data_store)
 
         return pair
 
@@ -392,7 +410,7 @@ class Matches:
         pair_name = f"{self.a.image_name}_{self.b.image_name}"
 
         warp = data_store.matcher_warp[pair_name][()]
-        warp = torch.from_array(warp)
+        warp = torch.from_numpy(warp)
         self.set_warp(warp)
 
         self.certainty = data_store.matcher_certainty[pair_name][()]
@@ -402,8 +420,9 @@ class Matches:
 
         assert self.warp is not None
         g = data_store.matcher_warp
-        data = self.warp.cpu().numpy()
-        g.create_dataset(pair_name, data=data)
+        if not pair_name in g:
+            data = self.warp.cpu().numpy()
+            g.create_dataset(pair_name, data=data)
 
         assert self.certainty is not None
         g = data_store.matcher_certainty
@@ -444,9 +463,11 @@ class Matches:
         pair_name = f"{self.a.image_name}_{self.b.image_name}"
 
         g = data_store.results_reference_coords
-        data = left_coords
-        g.create_dataset(pair_name, data=data)
+        if not pair_name in g:
+            data = left_coords
+            g.create_dataset(pair_name, data=data)
 
         g = data_store.results_target_coords
-        data = right_coords
-        g.create_dataset(pair_name, data=data)
+        if not pair_name in g:
+            data = right_coords
+            g.create_dataset(pair_name, data=data)

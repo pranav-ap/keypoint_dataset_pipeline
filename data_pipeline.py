@@ -12,10 +12,8 @@ import os
 class DataPipeline:
     def __init__(self):
         self.device = get_best_device()
+        make_clear_directory(config.paths[config.task.name].output)
         self.data_store = DataStore()
-
-        if config.task.name != 'samples' or not config.task.consider_samples:
-            make_clear_directory(config.paths[config.task.name].tensors_dir)
 
     @staticmethod
     def get_image_names():
@@ -71,16 +69,7 @@ class DataPipeline:
         data_filter.extract_good_matches(image_names)
         del data_filter
 
-        if config.task.name != 'samples' or not config.task.consider_samples:
-            folder_to_zip = config.paths[config.task.name].tensors_dir
-            zipdir = config.paths[config.task.name].zip_dir
-            output_zip_file = f'{zipdir}/matches.zip'
-            wild = '_matches.pt'
-
-            make_clear_directory(config.paths[config.task.name].zip_dir)
-            zip_folder(folder_to_zip, output_zip_file, wild)
-
-            config_filename = f'{zipdir}/current_config.yaml'
-            OmegaConf.save(config, config_filename)
+        config_filename = f'{config.paths[config.task.name].output}/config.yaml'
+        OmegaConf.save(config, config_filename)
 
         self.data_store.close()

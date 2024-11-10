@@ -7,8 +7,9 @@ from abc import ABC
 
 
 class KeypointMatcher(ABC):
+    device = get_best_device()
+
     def __init__(self, data_store):
-        self.device = get_best_device()
         self.data_store = data_store
 
 
@@ -46,7 +47,7 @@ class RoMaMatcher(KeypointMatcher):
             pair = Matches(a, b)
             pair.set_warp(warp)
             pair.certainty = certainty
-            pair.save()
+            pair.save(self.data_store)
 
             # Move forward
             a = b
