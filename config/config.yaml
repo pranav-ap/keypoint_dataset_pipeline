@@ -3,7 +3,7 @@ components:
     matcher: roma
 
 task:
-    name: samples  # samples basalt
+    name: basalt  # samples basalt
     consider_samples: True # True False
     
     # basalt related
@@ -15,8 +15,8 @@ task:
 
 samples:
     samples:
-        reference: sacre_coeur_A.jpg
-        target: sacre_coeur_B.jpg
+        reference: toronto_A.jpg
+        target: toronto_B.jpg
     basalt:
         reference: 8657652230990
         target: 8657685519990
@@ -37,7 +37,7 @@ paths:
         output: ${paths.roots.output}/${task.name}/${task.track}/${task.cam}
 
 image:
-    original_image_shape: [640, 480]  # [752, 480] [640, 480]
+    original_image_shape: [640, 480]  # [752, 480] [640, 480] [2040, 1530] 
     image_shape: [504, 504] # [504, 504] [width, height]
     patch_shape: [84, 84]  # [42, 42]  [84, 84]
 
