@@ -3,7 +3,8 @@ from utils import logger
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw
-from ImageData import Keypoints, Matches, DataStore
+from ImageData import Keypoints, Matches
+from DataStore import DataStore
 
 
 class Painter:

@@ -1,6 +1,6 @@
 from config import config
 from utils import get_best_device, logger, make_clear_directory
-from ImageData import DataStore
+from DataStore import DataStore
 from detectors import DeDoDeDetector
 from matchers import RoMaMatcher
 from DataFilter import DataFilter
@@ -76,8 +76,6 @@ class DataPipeline:
 
         config_filename = f'{config.paths[config.task.name].output}/config.yaml'
         OmegaConf.save(config, config_filename)
-
-        self.data_store.close()
 
     def run(self):
         try:
