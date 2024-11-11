@@ -20,7 +20,6 @@ class RoMaMatcher(KeypointMatcher):
         super().__init__(data_store)
 
         logger.info('Loading RoMaMatcher')
-
         from romatch import roma_outdoor
         self.model = roma_outdoor(
             device=self.device,
