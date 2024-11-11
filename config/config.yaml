@@ -32,7 +32,8 @@ paths:
         images: ${paths.roots.project}/data/samples/images
         output: ${paths.roots.output}/samples
     basalt:
-        csv: ${paths.roots.mav}/${task.cam}/data.csv
+        images_csv: ${paths.roots.mav}/${task.cam}/data.csv
+        imu_csv: ${paths.roots.mav}/imu0/data.csv
         images: ${paths.roots.mav}/${task.cam}/data
         output: ${paths.roots.output}/${task.name}/${task.dataset}/${task.track}
 
@@ -56,3 +57,6 @@ roma:
     filter:
         # keep matches over the absolute confidence threshold
         confidence_threshold: 0.6
+
+imu_filter:
+    lookback_seconds: 1
