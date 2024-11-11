@@ -11,13 +11,9 @@ class DataStore:
         self.mode = mode
 
     def init(self):
-        filename_inter = f'inter_{config.task.cam}.hdf5' if not config.task.consider_samples else 'inter.hdf5'
+        filename_inter = 'data.hdf5'
         filepath_inter = f'{config.paths[config.task.name].output}/{filename_inter}'
-        self._file_inter = h5py.File(filepath_inter, self.mode)
-
-        filename_results = f'results_{config.task.cam}.hdf5' if not config.task.consider_samples else 'results.hdf5'
-        filepath_results = f'{config.paths[config.task.name].output}/{filename_results}'
-        self._file_results = h5py.File(filepath_results, self.mode)
+        self._file = h5py.File(filepath_inter, self.mode)
 
         if self.mode == 'r':
             self._init_groups_read_mode()
@@ -25,13 +21,12 @@ class DataStore:
             self._init_groups_append_mode()
 
     def _init_groups_append_mode(self):
-        # Create groups in the interaction file
-        self._detector = self._file_inter.create_group('detector')
-        self._matcher = self._file_inter.create_group('matcher')
-        self._filter = self._file_inter.create_group('filter')
+        self._detector = self._file.create_group(f'{config.task.cam}/detector')
+        self._matcher = self._file.create_group(f'{config.task.cam}/matcher')
+        self._filter = self._file.create_group(f'{config.task.cam}/filter')
 
         # Create groups in the results file
-        self._results_matches = self._file_results.create_group('matches')
+        self._results_matches = self._file.create_group(f'{config.task.cam}/matches')
 
         # Setup 'detector' subgroups
         self.detector_image_level_normalised = self._detector.create_group('image_level/normalised')
@@ -58,13 +53,12 @@ class DataStore:
         self.results_small_target_coords = self._results_matches.create_group('small/target_coords')
 
     def _init_groups_read_mode(self):
-        # Create groups in the interaction file
-        self._detector = self._file_inter['detector']
-        self._matcher = self._file_inter['matcher']
-        self._filter = self._file_inter['filter']
+        self._detector = self._file[f'{config.task.cam}/detector']
+        self._matcher = self._file[f'{config.task.cam}/matcher']
+        self._filter = self._file[f'{config.task.cam}/filter']
 
         # Create groups in the results file
-        self._results_matches = self._file_results['matches']
+        self._results_matches = self._file[f'{config.task.cam}/matches']
 
         # Setup 'detector' subgroups
         self.detector_image_level_normalised = self._detector['image_level/normalised']
@@ -96,5 +90,4 @@ class DataStore:
         return random_key
 
     def close(self):
-        self._file_inter.close()
-        self._file_results.close()
+        self._file.close()

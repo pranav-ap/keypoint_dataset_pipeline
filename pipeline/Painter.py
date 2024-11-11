@@ -102,7 +102,7 @@ class Painter:
         image_vis = self._to_image(image_vis)
 
         draw = ImageDraw.Draw(image_vis)
-        draw.line((image_vis.width // 2, 0, image_vis.width // 2, image_vis.height), fill="red", width=2)
+        draw.line((image_vis.width // 2, 0, image_vis.width // 2, image_vis.height), fill="white", width=2)
 
         return image_vis
 
