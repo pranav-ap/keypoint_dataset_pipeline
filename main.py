@@ -1,4 +1,4 @@
-from data_pipeline import DataPipeline
+from pipeline import DataPipeline
 
 
 def main():

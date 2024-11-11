@@ -4,7 +4,7 @@ components:
 
 task:
     name: basalt  # samples basalt
-    consider_samples: True # True False
+    consider_samples: False # True False
     
     # basalt related
     
@@ -15,31 +15,32 @@ task:
 
 samples:
     samples:
-        reference: sacre_coeur_A.jpg
-        target: sacre_coeur_B.jpg
+        reference: toronto_A.jpg
+        target: toronto_B.jpg
     basalt:
         reference: 8657652230990
         target: 8657685519990
 
 paths:
     roots:
-        ws: /home/stud/ath/ath_ws
+        ws: D:/thesis_code # /home/stud/ath/ath_ws  D:/thesis_code
         mav: ${paths.roots.ws}/datasets/${task.dataset}/${task.track}/mav0
         project: ${paths.roots.ws}/keypoint_dataset_pipeline
         output: ${paths.roots.project}/output
 
     samples:
-        images_dir: ${paths.roots.project}/data/samples/images
-        tensors_dir: ${paths.roots.output}/tensors/samples
+        images: ${paths.roots.project}/data/samples/images
+        output: ${paths.roots.output}/samples
     basalt:
-        csv: ${paths.roots.mav}/${task.cam}/data.csv
-        images_dir: ${paths.roots.mav}/${task.cam}/data
-        tensors_dir: ${paths.roots.output}/tensors/${task.name}/${task.track}/${task.cam}
-        zip_dir: ${paths.roots.output}/zips/${task.name}/${task.track}/${task.cam}
+        images_csv: ${paths.roots.mav}/${task.cam}/data.csv
+        imu_csv: ${paths.roots.mav}/imu0/data.csv
+        images: ${paths.roots.mav}/${task.cam}/data
+        output: ${paths.roots.output}/${task.name}/${task.dataset}/${task.track}
 
 image:
-    original_image_shape: [640, 480]  # [752, 480] [640, 480]
-    image_shape: [504, 504] # [504, 504] [width, height]
+    # [width, height]
+    original_image_shape: [640, 480]  # [640, 480]
+    image_shape: [504, 504] # [504, 504]
     patch_shape: [84, 84]  # [42, 42]  [84, 84]
 
 dedode:
@@ -56,3 +57,6 @@ roma:
     filter:
         # keep matches over the absolute confidence threshold
         confidence_threshold: 0.6
+
+imu_filter:
+    lookback_seconds: 1
