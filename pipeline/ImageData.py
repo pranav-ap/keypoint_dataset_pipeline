@@ -76,13 +76,13 @@ class ImageKeypoints(_Keypoints):
         g = self.data_store.filter_image_level_normalised if self.is_filtered else self.data_store.detector_image_level_normalised
         if self.image_name not in g:
             data = self.normalised.cpu().numpy()
-            g.create_dataset(self.image_name, data=data)
+            g.create_dataset(self.image_name, data=data, compression='gzip')
 
         assert self.confidences is not None
         g = self.data_store.filter_image_level_confidences if self.is_filtered else self.data_store.detector_image_level_confidences
         if self.image_name not in g:
             data = self.confidences.cpu().numpy()
-            g.create_dataset(self.image_name, data=data)
+            g.create_dataset(self.image_name, data=data, compression='gzip')
 
 
 class PatchesKeypoints(_Keypoints):
@@ -124,19 +124,19 @@ class PatchesKeypoints(_Keypoints):
         g = self.data_store.filter_patch_level_normalised if self.is_filtered else self.data_store.detector_patch_level_normalised
         if self.image_name not in g:
             data = self.normalised.cpu().numpy()
-            g.create_dataset(self.image_name, data=data)
+            g.create_dataset(self.image_name, data=data, compression='gzip')
 
         assert self.confidences is not None
         g = self.data_store.filter_patch_level_confidences if self.is_filtered else self.data_store.detector_patch_level_confidences
         if self.image_name not in g:
             data = self.confidences.cpu().numpy()
-            g.create_dataset(self.image_name, data=data)
+            g.create_dataset(self.image_name, data=data, compression='gzip')
 
         assert self.which_patch is not None
         g = self.data_store.filter_patch_level_which_patch if self.is_filtered else self.data_store.detector_patch_level_which_patch
         if self.image_name not in g:
             data = self.which_patch
-            g.create_dataset(self.image_name, data=data)
+            g.create_dataset(self.image_name, data=data, compression='gzip')
 
 
 class Keypoints:
@@ -384,13 +384,13 @@ class Matches:
         g = self.data_store.matcher_warp
         if pair_name not in g:
             data = self.warp.cpu().numpy()
-            g.create_dataset(pair_name, data=data)
+            g.create_dataset(pair_name, data=data, compression='gzip')
 
         assert self.certainty is not None
         g = self.data_store.matcher_certainty
         if pair_name not in g:
             data = self.certainty.cpu().numpy()
-            g.create_dataset(pair_name, data=data)
+            g.create_dataset(pair_name, data=data, compression='gzip')
 
     def load_coords(self):
         pair_name = f"{self.a.image_name}_{self.b.image_name}"
@@ -447,16 +447,16 @@ class Matches:
 
         g = self.data_store.results_small_reference_coords
         if pair_name not in g:
-            g.create_dataset(pair_name, data=small_left_coords)
+            g.create_dataset(pair_name, data=small_left_coords, compression='gzip')
 
         g = self.data_store.results_small_target_coords
         if pair_name not in g:
-            g.create_dataset(pair_name, data=small_right_coords)
+            g.create_dataset(pair_name, data=small_right_coords, compression='gzip')
 
         g = self.data_store.results_original_reference_coords
         if pair_name not in g:
-            g.create_dataset(pair_name, data=original_left_coords)
+            g.create_dataset(pair_name, data=original_left_coords, compression='gzip')
 
         g = self.data_store.results_original_target_coords
         if pair_name not in g:
-            g.create_dataset(pair_name, data=original_right_coords)
+            g.create_dataset(pair_name, data=original_right_coords, compression='gzip')
