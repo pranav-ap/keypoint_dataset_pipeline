@@ -8,10 +8,14 @@ task:
     
     # basalt related
     
-    limit_count: 10
-    dataset: monado_slam # euroc monado_slam
-    track: MOO09_short_1_updown  # V1_01_easy MOO07_mapping_easy
-    cam: cam0 # cam0 cam1
+    limit_count: 0
+    # euroc monado_slam
+    dataset: monado_slam 
+    # V1_01_easy 
+    # MOO07_mapping_easy MOO09_short_1_updown MOO10_short_2_panorama
+    track: MOO10_short_2_panorama 
+    # cam0 cam1
+    cam: cam0 
 
 samples:
     samples:
@@ -23,7 +27,7 @@ samples:
 
 paths:
     roots:
-        ws: D:/thesis_code # /home/stud/ath/ath_ws  D:/thesis_code
+        ws: /home/stud/ath/ath_ws # /home/stud/ath/ath_ws  D:/thesis_code
         mav: ${paths.roots.ws}/datasets/${task.dataset}/${task.track}/mav0
         project: ${paths.roots.ws}/keypoint_dataset_pipeline
         output: ${paths.roots.project}/output
