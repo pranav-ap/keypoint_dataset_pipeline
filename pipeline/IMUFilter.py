@@ -20,10 +20,9 @@ class IMUFilter:
             imu_before = imu_df[mask].tail(N)
 
             # Calculate the time span covered by these N rows
+            time_span_seconds = 0
             if len(imu_before) > 1:
                 time_span_seconds = imu_before["timestamp"].iloc[-1] - imu_before["timestamp"].iloc[0]
-            else:
-                time_span_seconds = 0
 
             averaged_imu_data.append({
                 "timestamp": image_timestamp,

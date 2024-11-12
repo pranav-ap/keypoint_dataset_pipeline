@@ -10,7 +10,7 @@ task:
     
     limit_count: 10
     dataset: monado_slam # euroc monado_slam
-    track: MOO07/MOO07_mapping_easy  # V1_01_easy MOO07/MOO07_mapping_easy
+    track: MOO09_short_1_updown  # V1_01_easy MOO07_mapping_easy
     cam: cam0 # cam0 cam1
 
 samples:

@@ -5,7 +5,6 @@ zips/
 *.hdf5
 ./INSTRUCTIONS.md
 
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

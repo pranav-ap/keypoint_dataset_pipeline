@@ -68,14 +68,12 @@ class DataPipeline:
         logger.info('Data Pipeline has started running!')
 
         try:
-            logger.info(f'Clearing Directory : {config.paths[config.task.name].output}')
+            logger.info(f'Clear Directory : {config.paths[config.task.name].output}')
             make_clear_directory(config.paths[config.task.name].output)
-            logger.info(f'Clearing Directory Done')
 
+            logger.info('Save Current Config')
             config_filepath = f'{config.paths[config.task.name].output}/config.yaml'
-            logger.info(f'Saving Current Config to : {config_filepath}')
             OmegaConf.save(config, config_filepath)
-            logger.info(f'Saving Current Config Done')
 
             if config.task.consider_samples:
                 self._process_images()
@@ -85,8 +83,8 @@ class DataPipeline:
 
                 # Process Images
                 for cam in ['cam0', 'cam1']:
-                    config.task.cam = cam
                     logger.info(f'Camera {cam}')
+                    config.task.cam = cam
                     self._process_images()
 
         finally:
