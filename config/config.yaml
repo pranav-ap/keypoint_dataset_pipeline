@@ -8,12 +8,12 @@ task:
     
     # basalt related
     
-    limit_count: 0
+    limit_count: 6
     # euroc monado_slam
     dataset: monado_slam 
     # V1_01_easy 
     # MOO07_mapping_easy MOO09_short_1_updown MOO10_short_2_panorama
-    track: MOO10_short_2_panorama 
+    track: MOO07_mapping_easy
     # cam0 cam1
     cam: cam0 
 
@@ -27,7 +27,7 @@ samples:
 
 paths:
     roots:
-        ws: /home/stud/ath/ath_ws # /home/stud/ath/ath_ws  D:/thesis_code
+        ws: D:/thesis_code # /home/stud/ath/ath_ws  D:/thesis_code
         mav: ${paths.roots.ws}/datasets/${task.dataset}/${task.track}/mav0
         project: ${paths.roots.ws}/keypoint_dataset_pipeline
         output: ${paths.roots.project}/output
@@ -44,23 +44,17 @@ paths:
 image:
     # [width, height]
     original_image_shape: [640, 480]  # [640, 480]
-    image_shape: [504, 504] # [504, 504]
-    patch_shape: [84, 84]  # [42, 42]  [84, 84]
+    crop_image_shape: [ 630, 476 ] # [504, 504] [630, 476]
 
 dedode:
     batch_size: 6
     image_keypoints_count: 300
-    patch_keypoints_count: 2
 
     filter:
         # weighted sampling
         images_sample_count: 100
-        patches_sample_count: 10
 
 roma:
     filter:
         # keep matches over the absolute confidence threshold
         confidence_threshold: 0.6
-
-imu_filter:
-    lookback_seconds: 1

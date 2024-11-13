@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import pandas as pd
 from omegaconf import OmegaConf
@@ -7,7 +8,6 @@ from config import config
 from utils import get_best_device, logger, make_clear_directory
 from .DataFilter import DataFilter
 from .DataStore import DataStore
-from .IMUFilter import IMUFilter
 from .detectors import DeDoDeDetector
 from .matchers import RoMaMatcher
 
@@ -33,8 +33,6 @@ class DataPipeline:
 
         os.chdir(config.paths.roots.project)
         self.data_filter = DataFilter(self.data_store)
-
-        self.imu_filter = IMUFilter()
 
     @staticmethod
     def get_image_names():
@@ -78,8 +76,11 @@ class DataPipeline:
             if config.task.consider_samples:
                 self._process_images()
             else:
-                # Process IMU
-                self.imu_filter.extract()
+                # Copy IMU Data
+                shutil.copy(
+                    config.paths[config.task.name].imu_csv,
+                    f'{config.paths[config.task.name].output}/imu_data.csv'
+                )
 
                 # Process Images
                 for cam in ['cam0', 'cam1']:

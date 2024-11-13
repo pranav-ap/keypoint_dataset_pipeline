@@ -13,6 +13,7 @@ class DataStore:
     def init(self):
         filename_inter = 'data.hdf5'
         filepath_inter = f'{config.paths[config.task.name].output}/{filename_inter}'
+        # noinspection PyAttributeOutsideInit
         self._file = h5py.File(filepath_inter, self.mode)
 
         if self.mode == 'r':
@@ -27,28 +28,20 @@ class DataStore:
         self._matches = self._file.create_group(f'{config.task.cam}/matches')
 
         # Setup 'detector' subgroups
-        self.detector_image_level_normalised = self._detector.create_group('image_level/normalised')
-        self.detector_image_level_confidences = self._detector.create_group('image_level/confidences')
-        self.detector_patch_level_normalised = self._detector.create_group('patch_level/normalised')
-        self.detector_patch_level_confidences = self._detector.create_group('patch_level/confidences')
-        self.detector_patch_level_which_patch = self._detector.create_group('patch_level/which_patch')
+        self.detector_normalised = self._detector.create_group('normalised')
+        self.detector_confidences = self._detector.create_group('confidences')
 
         # Setup 'matcher' subgroups
         self.matcher_warp = self._matcher.create_group('warp')
         self.matcher_certainty = self._matcher.create_group('certainty')
 
         # Setup 'filter' subgroups
-        self.filter_image_level_normalised = self._filter.create_group('image_level/normalised')
-        self.filter_image_level_confidences = self._filter.create_group('image_level/confidences')
-        self.filter_patch_level_normalised = self._filter.create_group('patch_level/normalised')
-        self.filter_patch_level_confidences = self._filter.create_group('patch_level/confidences')
-        self.filter_patch_level_which_patch = self._filter.create_group('patch_level/which_patch')
+        self.filter_normalised = self._filter.create_group('normalised')
+        self.filter_confidences = self._filter.create_group('confidences')
 
         # Setup results subgroups
-        self.results_original_reference_coords = self._matches.create_group('original/reference_coords')
-        self.results_original_target_coords = self._matches.create_group('original/target_coords')
-        self.results_small_reference_coords = self._matches.create_group('small/reference_coords')
-        self.results_small_target_coords = self._matches.create_group('small/target_coords')
+        self.crop_reference_coords = self._matches.create_group('crop/reference_coords')
+        self.crop_target_coords = self._matches.create_group('crop/target_coords')
 
     def _init_groups_read_mode(self):
         self._detector = self._file[f'{config.task.cam}/detector']
@@ -57,31 +50,23 @@ class DataStore:
         self._matches = self._file[f'{config.task.cam}/matches']
 
         # Setup 'detector' subgroups
-        self.detector_image_level_normalised = self._detector['image_level/normalised']
-        self.detector_image_level_confidences = self._detector['image_level/confidences']
-        self.detector_patch_level_normalised = self._detector['patch_level/normalised']
-        self.detector_patch_level_confidences = self._detector['patch_level/confidences']
-        self.detector_patch_level_which_patch = self._detector['patch_level/which_patch']
+        self.detector_normalised = self._detector['normalised']
+        self.detector_confidences = self._detector['confidences']
 
         # Setup 'matcher' subgroups
         self.matcher_warp = self._matcher['warp']
         self.matcher_certainty = self._matcher['certainty']
 
         # Setup 'filter' subgroups
-        self.filter_image_level_normalised = self._filter['image_level/normalised']
-        self.filter_image_level_confidences = self._filter['image_level/confidences']
-        self.filter_patch_level_normalised = self._filter['patch_level/normalised']
-        self.filter_patch_level_confidences = self._filter['patch_level/confidences']
-        self.filter_patch_level_which_patch = self._filter['patch_level/which_patch']
+        self.filter_normalised = self._filter['normalised']
+        self.filter_confidences = self._filter['confidences']
 
         # Setup results subgroups
-        self.results_original_reference_coords = self._matches['original/reference_coords']
-        self.results_original_target_coords = self._matches['original/target_coords']
-        self.results_small_reference_coords = self._matches['small/reference_coords']
-        self.results_small_target_coords = self._matches['small/target_coords']
+        self.crop_reference_coords = self._matches['crop/reference_coords']
+        self.crop_target_coords = self._matches['crop/target_coords']
 
     def get_random_pair(self):
-        keys = list(self.results_small_reference_coords.keys())
+        keys = list(self.crop_reference_coords.keys())
         random_key = random.choice(keys)
         return random_key
 
