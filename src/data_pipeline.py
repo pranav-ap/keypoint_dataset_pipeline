@@ -83,7 +83,7 @@ class DataPipeline:
                 )
 
                 # Process Images
-                for cam in ['cam0', 'cam1']:
+                for cam in config.task.cams:
                     logger.info(f'Camera {cam}')
                     config.task.cam = cam
                     self._process_images()

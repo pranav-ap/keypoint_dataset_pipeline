@@ -11,10 +11,10 @@ class DataStore:
         self.mode = mode
 
     def init(self):
-        filename_inter = 'data.hdf5'
-        filepath_inter = f'{config.paths[config.task.name].output}/{filename_inter}'
+        filename = 'data.hdf5'
+        filepath = f'{config.paths[config.task.name].output}/{filename}'
         # noinspection PyAttributeOutsideInit
-        self._file = h5py.File(filepath_inter, self.mode)
+        self._file = h5py.File(filepath, self.mode)
 
         if self.mode == 'r':
             self._init_groups_read_mode()
@@ -27,19 +27,15 @@ class DataStore:
         self._filter = self._file.create_group(f'{config.task.cam}/filter')
         self._matches = self._file.create_group(f'{config.task.cam}/matches')
 
-        # Setup 'detector' subgroups
         self.detector_normalised = self._detector.create_group('normalised')
         self.detector_confidences = self._detector.create_group('confidences')
 
-        # Setup 'matcher' subgroups
         self.matcher_warp = self._matcher.create_group('warp')
         self.matcher_certainty = self._matcher.create_group('certainty')
 
-        # Setup 'filter' subgroups
         self.filter_normalised = self._filter.create_group('normalised')
         self.filter_confidences = self._filter.create_group('confidences')
 
-        # Setup results subgroups
         self.crop_reference_coords = self._matches.create_group('crop/reference_coords')
         self.crop_target_coords = self._matches.create_group('crop/target_coords')
 
@@ -49,19 +45,15 @@ class DataStore:
         self._filter = self._file[f'{config.task.cam}/filter']
         self._matches = self._file[f'{config.task.cam}/matches']
 
-        # Setup 'detector' subgroups
         self.detector_normalised = self._detector['normalised']
         self.detector_confidences = self._detector['confidences']
 
-        # Setup 'matcher' subgroups
         self.matcher_warp = self._matcher['warp']
         self.matcher_certainty = self._matcher['certainty']
 
-        # Setup 'filter' subgroups
         self.filter_normalised = self._filter['normalised']
         self.filter_confidences = self._filter['confidences']
 
-        # Setup results subgroups
         self.crop_reference_coords = self._matches['crop/reference_coords']
         self.crop_target_coords = self._matches['crop/target_coords']
 

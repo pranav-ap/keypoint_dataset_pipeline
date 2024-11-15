@@ -8,14 +8,18 @@ task:
     
     # basalt related
     
-    limit_count: 6
+    limit_count: 10
     # euroc monado_slam
     dataset: monado_slam 
     # V1_01_easy 
     # MOO07_mapping_easy MOO09_short_1_updown MOO10_short_2_panorama
     track: MOO07_mapping_easy
-    # cam0 cam1
-    cam: cam0 
+    tracks:
+        - MOO07_mapping_easy
+    cam: cam0
+    cams:
+        - cam0
+        - cam1
 
 samples:
     samples:
@@ -40,6 +44,7 @@ paths:
         imu_csv: ${paths.roots.mav}/imu0/data.csv
         images: ${paths.roots.mav}/${task.cam}/data
         output: ${paths.roots.output}/${task.name}/${task.dataset}/${task.track}
+        train_data: ${paths.roots.output}/train
 
 image:
     # [width, height]
@@ -48,7 +53,7 @@ image:
 
 dedode:
     batch_size: 6
-    image_keypoints_count: 300
+    image_keypoints_count: 400
 
     filter:
         # weighted sampling

@@ -75,13 +75,13 @@ class ImageKeypoints(_Keypoints):
         g = self.data_store.filter_normalised if self.is_filtered else self.data_store.detector_normalised
         if self.image_name not in g:
             data = self.normalised.cpu().numpy()
-            g.create_dataset(self.image_name, data=data, compression='gzip')
+            g.create_dataset(self.image_name, data=data, compression='gzip', compression_opts=9)
 
         assert self.confidences is not None
         g = self.data_store.filter_confidences if self.is_filtered else self.data_store.detector_confidences
         if self.image_name not in g:
             data = self.confidences.cpu().numpy()
-            g.create_dataset(self.image_name, data=data, compression='gzip')
+            g.create_dataset(self.image_name, data=data, compression='gzip', compression_opts=9)
 
 
 class Keypoints:
@@ -275,8 +275,6 @@ class Matches:
         left_padding = (original_w - crop_w) // 2
         top_padding = (original_h - crop_h) // 2
 
-        print(f'left_padding, top_padding {left_padding, top_padding}')
-
         reference_crop_coords = [
             cv2.KeyPoint(kp.pt[0] + left_padding, kp.pt[1] + top_padding, 1.)
             for kp in self.reference_crop_coords
@@ -309,13 +307,13 @@ class Matches:
         g = self.data_store.matcher_warp
         if pair_name not in g:
             data = self.warp.cpu().numpy()
-            g.create_dataset(pair_name, data=data, compression='gzip')
+            g.create_dataset(pair_name, data=data, compression='gzip', compression_opts=9)
 
         assert self.certainty is not None
         g = self.data_store.matcher_certainty
         if pair_name not in g:
             data = self.certainty.cpu().numpy()
-            g.create_dataset(pair_name, data=data, compression='gzip')
+            g.create_dataset(pair_name, data=data, compression='gzip', compression_opts=9)
 
     def load_coords(self):
         pair_name = f"{self.a.image_name}_{self.b.image_name}"
@@ -343,8 +341,8 @@ class Matches:
 
         g = self.data_store.crop_reference_coords
         if pair_name not in g:
-            g.create_dataset(pair_name, data=reference_crop_coords, compression='gzip')
+            g.create_dataset(pair_name, data=reference_crop_coords, compression='gzip', compression_opts=9)
 
         g = self.data_store.crop_target_coords
         if pair_name not in g:
-            g.create_dataset(pair_name, data=target_crop_coords, compression='gzip')
+            g.create_dataset(pair_name, data=target_crop_coords, compression='gzip', compression_opts=9)
