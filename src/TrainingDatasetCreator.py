@@ -3,6 +3,7 @@ import numpy as np
 from tqdm import tqdm
 
 from config import config
+from utils import logger
 
 
 class TrainingDatasetCreator:
@@ -48,16 +49,16 @@ class TrainingDatasetCreator:
             tars_to.create_dataset(pair_name, data=target_orig_coords, compression='lzf')
 
     def extract(self):
-        total = len(config.task.tracks)
-
-        for track in tqdm(config.task.tracks, total=total, desc="Extracting Original Coordinates", ncols=100):
+        for track in config.task.tracks:
             config.task.track = track
+
+            logger.info(f'Extracting Coordinates : {track}')
 
             filepath = f'{config.paths[config.task.name].output}/data.hdf5'
             # noinspection PyAttributeOutsideInit
             input_file = h5py.File(filepath, mode='r')
 
-            for cam in config.task.cams:
+            for cam in tqdm(config.task.cams, total=2, desc="Extracting Original Coordinates", ncols=100):
                 config.task.cam = cam
 
                 refs_to = self._file.create_group(f'{track}/{cam}/reference_coords')
