@@ -3,6 +3,8 @@ import shutil
 
 import pandas as pd
 from omegaconf import OmegaConf
+import torch
+import gc
 
 from config import config
 from utils import get_best_device, logger, make_clear_directory
@@ -86,6 +88,8 @@ class DataPipeline:
                 for cam in config.task.cams:
                     logger.info(f'Camera {cam}')
                     config.task.cam = cam
+                    torch.cuda.empty_cache()
+                    gc.collect()
                     self._process_images()
 
         finally:
