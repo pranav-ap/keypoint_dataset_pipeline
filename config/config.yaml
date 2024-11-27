@@ -8,7 +8,7 @@ task:
     
     # basalt related
     
-    limit_count: 10
+    limit_count: 0
     # euroc monado_slam
     dataset: monado_slam 
     # V1_01_easy 
@@ -20,6 +20,9 @@ task:
     cams:
         - cam0
         - cam1
+
+train:
+    num_patches_per_image: 160
 
 samples:
     samples:

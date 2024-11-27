@@ -20,5 +20,4 @@ dependencies:
     - h5py
     - pip:
         - opencv-python
-        - timm
         

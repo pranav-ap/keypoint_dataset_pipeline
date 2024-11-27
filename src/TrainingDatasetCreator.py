@@ -1,3 +1,5 @@
+import random
+
 import h5py
 import numpy as np
 from tqdm import tqdm
@@ -31,7 +33,7 @@ class TrainingDatasetCreator:
 
         return reference_crop_coords, target_crop_coords
 
-    def extract_coords(self, refs_from, tars_from, refs_to, tars_to):
+    def extract_coords(self, refs_from, tars_from, refs_to, tars_to, indices_to):
         for (pair_name, ref_dataset), (_, tar_dataset) in zip(refs_from.items(), tars_from.items()):
             if not isinstance(ref_dataset, h5py.Dataset) or not isinstance(tar_dataset, h5py.Dataset):
                 continue
@@ -44,8 +46,17 @@ class TrainingDatasetCreator:
                 target_crop_coords
             )
 
+            reference_coords_len = len(reference_orig_coords)
+            target_coords_len = len(target_orig_coords)
+            assert reference_coords_len == target_coords_len
+
             refs_to.create_dataset(pair_name, data=reference_orig_coords, compression='lzf')
             tars_to.create_dataset(pair_name, data=target_orig_coords, compression='lzf')
+
+            N = min(reference_coords_len, config.train.num_patches_per_image)
+            patch_indices = random.sample(range(reference_coords_len), N)
+
+            indices_to.create_dataset(pair_name, data=patch_indices, compression='lzf')
 
     def extract(self):
         total = len(config.task.tracks)
@@ -60,13 +71,14 @@ class TrainingDatasetCreator:
             for cam in config.task.cams:
                 config.task.cam = cam
 
-                refs_to = self._file.create_group(f'{track}/{cam}/reference_coords')
-                tars_to = self._file.create_group(f'{track}/{cam}/target_coords')
-
                 refs_from = input_file[f'{cam}/matches/crop/reference_coords']
                 tars_from = input_file[f'{cam}/matches/crop/target_coords']
 
-                self.extract_coords(refs_from, tars_from, refs_to, tars_to)
+                refs_to = self._file.create_group(f'{track}/{cam}/reference_coords')
+                tars_to = self._file.create_group(f'{track}/{cam}/target_coords')
+                indices_to = self._file.create_group(f'{track}/{cam}/indices')
+
+                self.extract_coords(refs_from, tars_from, refs_to, tars_to, indices_to)
 
             input_file.close()
 
