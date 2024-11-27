@@ -54,9 +54,7 @@ class TrainingDatasetCreator:
             refs_to.create_dataset(pair_name, data=reference_orig_coords, compression='lzf')
             tars_to.create_dataset(pair_name, data=target_orig_coords, compression='lzf')
 
-            N = min(reference_coords_len, config.train.num_patches_per_image)
-            patch_indices = random.sample(range(reference_coords_len), N)
-
+            patch_indices = random.sample(range(reference_coords_len), reference_coords_len)
             indices_to.create_dataset(pair_name, data=patch_indices, compression='lzf')
 
     def extract(self):
