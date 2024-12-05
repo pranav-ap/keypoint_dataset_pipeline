@@ -5,20 +5,25 @@ components:
 task:
     name: basalt  # samples basalt
     consider_samples: False # True False
-
+    
     # basalt related
-
+    
     limit_count: 0
-    # euroc monado_slam
-    dataset: monado_slam
-    # V1_01_easy 
-    # MOO07_mapping_easy MOO09_short_1_updown MOO10_short_2_panorama MOO11_short_3_backandforth
-    track: MOO11_short_3_backandforth
+    
+    dataset: monado_slam  # euroc monado_slam
+
+    track: MOO04_hand_shooter_hard
     tracks:
-        - MOO11_short_3_backandforth
-        - MOO10_short_2_panorama
-        - MOO09_short_1_updown 
+        - MGO07_mapping_easy
         - MOO07_mapping_easy
+        - MOO09_short_1_updown
+        - MOO10_short_2_panorama
+        - MOO11_short_3_backandforth
+        - MGO08_mapping_hard  
+        # - MGO13_sudden_movements # must runn 
+        # - MGO14_flickering_light # must runn
+        # - MOO04_hand_shooter_hard # must run 
+
     cam: cam0
     cams:
         - cam0
@@ -47,11 +52,11 @@ paths:
         imu_csv: ${paths.roots.mav}/imu0/data.csv
         images: ${paths.roots.mav}/${task.cam}/data
         output: ${paths.roots.output}/${task.name}/${task.dataset}/${task.track}
-        train_data: ${paths.roots.output}/train
+        train_data: ${paths.roots.output}/train_6
 
 image:
     # [width, height]
-    original_image_shape: [ 640, 480 ]  # [640, 480]
+    original_image_shape: [640, 480]  # [640, 480]
     crop_image_shape: [ 630, 476 ] # [504, 504] [630, 476]
 
 dedode:
@@ -60,7 +65,7 @@ dedode:
 
     filter:
         # weighted sampling
-        images_sample_count: 100
+        images_sample_count: 200
 
 roma:
     filter:

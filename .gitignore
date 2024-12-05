@@ -3,6 +3,7 @@ output/
 tensors/
 zips/
 *.hdf5
+*.out
 ./INSTRUCTIONS.md
 
 # Byte-compiled / optimized / DLL files
