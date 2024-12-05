@@ -9,16 +9,20 @@ task:
     # basalt related
     
     limit_count: 0
+    
+    dataset: monado_slam  # euroc monado_slam
 
-    # euroc monado_slam
-    dataset: monado_slam 
-
-    track: MOO07_mapping_easy
+    track: MOO04_hand_shooter_hard
     tracks:
+        - MGO07_mapping_easy
         - MOO07_mapping_easy
         - MOO09_short_1_updown
         - MOO10_short_2_panorama
         - MOO11_short_3_backandforth
+        - MGO08_mapping_hard  
+        # - MGO13_sudden_movements # must runn 
+        # - MGO14_flickering_light # must runn
+        # - MOO04_hand_shooter_hard # must run 
 
     cam: cam0
     cams:
@@ -48,7 +52,7 @@ paths:
         imu_csv: ${paths.roots.mav}/imu0/data.csv
         images: ${paths.roots.mav}/${task.cam}/data
         output: ${paths.roots.output}/${task.name}/${task.dataset}/${task.track}
-        train_data: ${paths.roots.output}/train
+        train_data: ${paths.roots.output}/train_6
 
 image:
     # [width, height]
@@ -61,7 +65,7 @@ dedode:
 
     filter:
         # weighted sampling
-        images_sample_count: 100
+        images_sample_count: 200
 
 roma:
     filter:

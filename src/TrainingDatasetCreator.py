@@ -41,6 +41,8 @@ class TrainingDatasetCreator:
 
             reference_crop_coords = ref_dataset[()]
             target_crop_coords = tar_dataset[()]
+            assert len(reference_crop_coords) > 0
+            assert len(reference_crop_coords) == len(target_crop_coords)
 
             reference_orig_coords, target_orig_coords = self.get_coords_on_original_image(
                 reference_crop_coords,
@@ -49,6 +51,7 @@ class TrainingDatasetCreator:
 
             reference_coords_len = len(reference_orig_coords)
             target_coords_len = len(target_orig_coords)
+            assert reference_coords_len > 0
             assert reference_coords_len == target_coords_len
 
             refs_to.create_dataset(pair_name, data=reference_orig_coords, compression='lzf')
