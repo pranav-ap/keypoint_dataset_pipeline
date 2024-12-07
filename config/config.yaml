@@ -20,9 +20,9 @@ task:
         - MOO10_short_2_panorama
         - MOO11_short_3_backandforth
         - MGO08_mapping_hard  
-        # - MGO13_sudden_movements # must runn 
-        # - MGO14_flickering_light # must runn
-        # - MOO04_hand_shooter_hard # must run 
+        # - MGO13_sudden_movements  # check all 3 for continuity
+        # - MGO14_flickering_light
+        # - MOO04_hand_shooter_hard 
 
     cam: cam0
     cams:
@@ -52,7 +52,7 @@ paths:
         imu_csv: ${paths.roots.mav}/imu0/data.csv
         images: ${paths.roots.mav}/${task.cam}/data
         output: ${paths.roots.output}/${task.name}/${task.dataset}/${task.track}
-        train_data: ${paths.roots.output}/train_6
+        train_data: ${paths.roots.output}/train_waste
 
 image:
     # [width, height]
