@@ -1,8 +1,10 @@
 from typing import Optional
 
+import numpy as np
 import torch
 from tqdm import tqdm
 
+import rotate
 from config import config
 from .ImageData import Keypoints, Matches
 
@@ -78,5 +80,21 @@ class DataFilter:
 
             # Update for next iteration
             top_keypoints = self._filter_keypoints(b)
+
+            # Extract rotations
+
+            reference_crop_coords, target_crop_coords = pair.get_coords_on_original_image()
+            pair.rotations = []
+
+            for i in range(len(reference_crop_coords)):
+                angle = rotate.solve_patch_rotation(
+                    a.original_image, b.original_image,
+                    np.array([reference_crop_coords[i].pt[0], reference_crop_coords[i].pt[1]]),
+                    np.array([target_crop_coords[i].pt[0], target_crop_coords[i].pt[1]]),
+                )
+
+                pair.rotations.append(angle)
+
+            pair.save_rotations()
 
             a = b

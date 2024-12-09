@@ -60,6 +60,16 @@ class TrainingDatasetCreator:
             patch_indices = random.sample(range(reference_coords_len), reference_coords_len)
             indices_to.create_dataset(pair_name, data=patch_indices, compression='lzf')
 
+    @staticmethod
+    def extract_rotations(rotations_from, rotations_to):
+        for pair_name, rotations_dataset in rotations_from.items():
+            if not isinstance(rotations_dataset, h5py.Dataset):
+                continue
+
+            rotations = rotations_dataset[()]
+            assert len(rotations) > 0
+            rotations_to.create_dataset(pair_name, data=rotations, compression='lzf')
+
     def extract(self):
         for track in config.task.tracks:
             config.task.track = track
@@ -81,6 +91,11 @@ class TrainingDatasetCreator:
                 indices_to = self._file.create_group(f'{track}/{cam}/indices')
 
                 self.extract_coords(refs_from, tars_from, refs_to, tars_to, indices_to)
+
+                rotations_from = input_file[f'{cam}/rotations']
+                rotations_to = self._file.create_group(f'{track}/{cam}/rotations')
+
+                self.extract_rotations(rotations_from, rotations_to)
 
             input_file.close()
 

@@ -198,6 +198,8 @@ class Matches:
         self.reference_crop_coords: Optional[List[cv2.KeyPoint]] = None
         self.target_crop_coords: Optional[List[cv2.KeyPoint]] = None
 
+        self.rotations = None
+
     @staticmethod
     def load_from_names(name_a, name_b, data_store, load_coords=False, must_crop=True):
         a = Keypoints.load_from_name(name_a, data_store, must_crop=must_crop)
@@ -346,3 +348,13 @@ class Matches:
         g = self.data_store.crop_target_coords
         if pair_name not in g:
             g.create_dataset(pair_name, data=target_crop_coords, compression='gzip', compression_opts=9)
+
+    def save_rotations(self):
+        assert self.rotations is not None
+        rotations = np.array(self.rotations)
+
+        pair_name = f"{self.a.image_name}_{self.b.image_name}"
+
+        g = self.data_store.rotations
+        if pair_name not in g:
+            g.create_dataset(pair_name, data=rotations, compression='gzip', compression_opts=9)

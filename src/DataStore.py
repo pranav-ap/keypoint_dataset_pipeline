@@ -26,6 +26,7 @@ class DataStore:
         self._matcher = self._file.create_group(f'{config.task.cam}/matcher')
         self._filter = self._file.create_group(f'{config.task.cam}/filter')
         self._matches = self._file.create_group(f'{config.task.cam}/matches')
+        self._rotations = self._file.create_group(f'{config.task.cam}/rotations')
 
         self.detector_normalised = self._detector.create_group('normalised')
         self.detector_confidences = self._detector.create_group('confidences')
@@ -44,6 +45,7 @@ class DataStore:
         self._matcher = self._file[f'{config.task.cam}/matcher']
         self._filter = self._file[f'{config.task.cam}/filter']
         self._matches = self._file[f'{config.task.cam}/matches']
+        self._rotations = self._file[f'{config.task.cam}/rotations']
 
         self.detector_normalised = self._detector['normalised']
         self.detector_confidences = self._detector['confidences']

@@ -14,13 +14,17 @@ task:
 
     track: MOO04_hand_shooter_hard
     tracks:
-        - MGO07_mapping_easy
-        - MOO07_mapping_easy
         - MOO09_short_1_updown
-        - MOO10_short_2_panorama
-        - MOO11_short_3_backandforth
-        - MGO08_mapping_hard  
-        # - MGO13_sudden_movements  # check all 3 for continuity
+
+        #        - MGO07_mapping_easy
+        #        - MOO07_mapping_easy
+        #        - MOO09_short_1_updown
+        #        - MOO10_short_2_panorama
+        #        - MOO11_short_3_backandforth
+        #        - MGO08_mapping_hard
+
+        # check all 3 for continuity
+        # - MGO13_sudden_movements
         # - MGO14_flickering_light
         # - MOO04_hand_shooter_hard 
 
@@ -39,7 +43,8 @@ samples:
 
 paths:
     roots:
-        ws: /home/stud/ath/ath_ws # /home/stud/ath/ath_ws  D:/thesis_code
+        #        ws: /home/stud/ath/ath_ws
+        ws: D:/thesis_code
         mav: ${paths.roots.ws}/datasets/${task.dataset}/${task.track}/mav0
         project: ${paths.roots.ws}/keypoint_dataset_pipeline
         output: ${paths.roots.project}/output
@@ -50,6 +55,10 @@ paths:
     basalt:
         images_csv: ${paths.roots.mav}/${task.cam}/data.csv
         imu_csv: ${paths.roots.mav}/imu0/data.csv
+
+        aligned_csv: ${paths.roots.mav}/${task.cam}/aligned.csv
+        keyframes_csv: ${paths.roots.mav}/${task.cam}/keyframes.csv
+
         images: ${paths.roots.mav}/${task.cam}/data
         output: ${paths.roots.output}/${task.name}/${task.dataset}/${task.track}
         train_data: ${paths.roots.output}/train_waste
