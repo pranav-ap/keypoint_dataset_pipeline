@@ -5,8 +5,11 @@
 from math import cos, pi, sin
 
 import numpy as np
-# noinspection PyUnresolvedReferences
-from bilinterp import batch_interp, batch_interp_grad
+
+# import bilinterp as bi
+from .bilinterp import batch_interp, batch_interp_grad
+
+
 from scipy.optimize import brute
 
 type Vector2 = np.ndarray  # float32, shape=(2,)

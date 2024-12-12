@@ -43,8 +43,15 @@ class DataPipeline:
                 str(config.samples[config.task.name].reference),
                 str(config.samples[config.task.name].target)
             ]
+        
+        df = None
 
-        df = pd.read_csv(config.paths[config.task.name].images_csv, header=0, names=('timestamp', 'filename'))
+        if config.task.use_keyframes:
+            df = pd.read_csv(config.paths[config.task.name].keyframes_csv, header=0, names=('timestamp', 'filename', 'w_x', 'w_y', 'w_z', 'a_x', 'a_y', 'a_z', 'dt', 'velocity_x', 'velocity_y', 'velocity_z', 'position_x', 'position_y', 'position_z', 'displacement'))
+        else:
+            # use for all frames
+            df = pd.read_csv(config.paths[config.task.name].images_csv, header=0, names=('timestamp', 'filename'))
+            
         df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ns')
         df = df.sort_values(by='timestamp')
         df['filename'] = df['filename'].str.replace(".png", "", regex=False)

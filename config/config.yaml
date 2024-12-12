@@ -8,11 +8,12 @@ task:
     
     # basalt related
     
-    limit_count: 0
+    limit_count: 20
+    use_keyframes: True # True False
     
     dataset: monado_slam  # euroc monado_slam
 
-    track: MOO04_hand_shooter_hard
+    track: MOO09_short_1_updown
     tracks:
         - MOO09_short_1_updown
 
@@ -43,8 +44,8 @@ samples:
 
 paths:
     roots:
-        #        ws: /home/stud/ath/ath_ws
-        ws: D:/thesis_code
+        ws: /home/stud/ath/ath_ws
+        # ws: D:/thesis_code
         mav: ${paths.roots.ws}/datasets/${task.dataset}/${task.track}/mav0
         project: ${paths.roots.ws}/keypoint_dataset_pipeline
         output: ${paths.roots.project}/output

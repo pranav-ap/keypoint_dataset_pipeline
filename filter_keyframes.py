@@ -71,7 +71,7 @@ def filter_rows(track, cam, aligned_df):
     logger.info(f"Max displacement: {aligned_df['displacement'].max()}")
 
     # Define a threshold
-    displacement_threshold = 0.1  # in meters, adjust as necessary
+    displacement_threshold = 0.2  # in meters, adjust as necessary
 
     keyframes_df = aligned_df[aligned_df['displacement'] > displacement_threshold]
 

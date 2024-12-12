@@ -1,5 +1,6 @@
 libs/
 output/
+output_all/
 tensors/
 zips/
 *.hdf5
