@@ -8,12 +8,12 @@ task:
     
     # basalt related
     
-    limit_count: 20
-    use_keyframes: True # True False
+    limit_count: 0
+    use_keyframes: False # True False
     
     dataset: monado_slam  # euroc monado_slam
 
-    track: MOO09_short_1_updown
+    track: MOO08_mapping_hard
     tracks:
         - MOO09_short_1_updown
 
@@ -23,11 +23,12 @@ task:
         #        - MOO10_short_2_panorama
         #        - MOO11_short_3_backandforth
         #        - MGO08_mapping_hard
-
+        
         # check all 3 for continuity
         # - MGO13_sudden_movements
         # - MGO14_flickering_light
         # - MOO04_hand_shooter_hard 
+        # - MOO08_mapping_hard
 
     cam: cam0
     cams:

@@ -4,6 +4,14 @@ from tqdm import tqdm
 
 from config import config
 from utils import logger
+import json
+
+
+def read_calib_json():
+    file_path = ''
+    with open(file_path, 'r') as file:
+        data = json.load(file) 
+        
 
 
 def read_imu_csv():
