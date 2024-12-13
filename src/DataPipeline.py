@@ -1,10 +1,10 @@
+import gc
 import os
 import shutil
 
 import pandas as pd
-from omegaconf import OmegaConf
 import torch
-import gc
+from omegaconf import OmegaConf
 
 from config import config
 from utils import get_best_device, logger, make_clear_directory

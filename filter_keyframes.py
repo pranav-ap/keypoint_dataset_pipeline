@@ -1,10 +1,11 @@
+import json
+
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
 from config import config
 from utils import logger
-import json
 
 
 def read_calib_json():
@@ -81,7 +82,22 @@ def filter_rows(track, cam, aligned_df):
     # Define a threshold
     displacement_threshold = 0.2  # in meters, adjust as necessary
 
-    keyframes_df = aligned_df[aligned_df['displacement'] > displacement_threshold]
+    # keyframes_df = aligned_df[aligned_df['displacement'] > displacement_threshold]
+
+    # Find the next row that satisfies the threshold for each row
+    keyframes_indices = []
+    i = 0
+
+    while i < len(aligned_df):
+        keyframes_indices.append(i)
+        next_row = aligned_df['displacement'][i + 1:].gt(displacement_threshold).idxmax()
+
+        if aligned_df['displacement'][next_row] <= displacement_threshold or next_row <= i:
+            break
+
+        i = next_row
+
+    keyframes_df = aligned_df.iloc[keyframes_indices].reset_index(drop=True)
 
     logger.info(f"Stats for filtered DataFrame ({track}, {cam}):")
     logger.info(f"Shape of DataFrame: {keyframes_df.shape}")
