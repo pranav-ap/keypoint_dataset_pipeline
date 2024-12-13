@@ -2,123 +2,142 @@ import json
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
+from scipy.spatial.transform import Rotation as R
 
 from config import config
 from utils import logger
 
 
+def to_transformation_matrix(d):
+    px, py, pz = d['px'], d['py'], d['pz']
+    qx, qy, qz, qw = d['qx'], d['qy'], d['qz'], d['qw']
+
+    rotation = R.from_quat([qx, qy, qz, qw]).as_matrix()
+
+    # 4x4 transformation matrix
+    transformation = np.eye(4)  # Identity matrix
+    transformation[:3, :3] = rotation  # Set rotation
+    transformation[:3, 3] = [px, py, pz]  # Set translation
+
+    return transformation
+
+
 def read_calib_json():
-    file_path = ''
-    with open(file_path, 'r') as file:
-        data = json.load(file) 
-        
+    calib_path = config.paths.basalt.calib_json
+    # calib_path = r"D:/thesis_code/datasets/monado_slam/M_monado_datasets_MO_odyssey_plus_extras_calibration.json"
+    with open(calib_path, 'r') as file:
+        data = json.load(file)
+        data = data['value0']['T_imu_cam'][0]  # only using cam 0
+        return data
 
 
 def read_imu_csv():
     imu_path = config.paths.basalt.imu_csv
     imu = pd.read_csv(imu_path, header=0, names=('timestamp', 'w_x', 'w_y', 'w_z', 'a_x', 'a_y', 'a_z'))
-    imu['timestamp'] = pd.to_datetime(imu['timestamp'], unit='ns')
-    imu = imu.sort_values(by='timestamp').reset_index(drop=True)
+    imu['ts'] = pd.to_datetime(imu['timestamp'], unit='ns')
+    imu = imu.sort_values(by='ts').reset_index(drop=True)
 
     return imu
 
 
+def read_gt_csv():
+    gt_path = config.paths.basalt.gt_csv
+    # gt_path = r'D:\thesis_code\datasets\monado_slam\MOO07_mapping_easy\mav0\gt\data.csv'
+    gt = pd.read_csv(gt_path, header=0, names=('timestamp', 'px', 'py', 'pz', 'qw', 'qx', 'qy', 'qz'))
+    gt['ts'] = pd.to_datetime(gt['timestamp'], unit='ns')
+    gt = gt.sort_values(by='ts').reset_index(drop=True)
+
+    return gt
+
+
 def read_images_csv():
     files_path = config.paths.basalt.images_csv
+    # files_path = r"D:\thesis_code\datasets\monado_slam\MOO07_mapping_easy\mav0\cam0\data.csv"
     files = pd.read_csv(files_path, header=0, names=('timestamp', 'filename'))
-    files['timestamp'] = pd.to_datetime(files['timestamp'], unit='ns')
-    files = files.sort_values(by='timestamp').reset_index(drop=True)
+    files['ts'] = pd.to_datetime(files['timestamp'], unit='ns')
+    files = files.sort_values(by='ts').reset_index(drop=True)
 
     return files
 
 
-def align_rows(track, cam, imu):
+def align_rows(files, gt):
     logger.info(f'Align Rows')
 
-    files = read_images_csv()
-    # aligned_df stores files df timestamp
     aligned_df = pd.merge_asof(
-        files, imu,
+        files, gt,
         on="timestamp",
         direction="backward",
-        suffixes=('', '_imu')
-    )
+    ).dropna()
 
-    aligned_df = aligned_df.dropna()
     aligned_df.to_csv(config.paths.basalt.aligned_csv, index=False, header=True)
-
-    logger.info(f"Stats for aligned DataFrame ({track}, {cam}):")
-    logger.info(f"Shape of DataFrame: {aligned_df.shape}")
+    logger.info(f"Shape of aligned_df: {aligned_df.shape}")
 
     return aligned_df
 
 
-def filter_rows(track, cam, aligned_df):
+def filter_rows(aligned_df, T_i_c0):
     logger.info(f'Filter Keyframes')
 
-    aligned_df['dt'] = aligned_df['timestamp'].diff().dt.total_seconds()
+    displacement_threshold = 0.02  # meters
+    angle_threshold = 20  # degrees
 
-    # Integrating acceleration to get velocity (assuming initial velocity = 0)
-    aligned_df['velocity_x'] = (aligned_df['a_x'] * aligned_df['dt']).cumsum()
-    aligned_df['velocity_y'] = (aligned_df['a_y'] * aligned_df['dt']).cumsum()
-    aligned_df['velocity_z'] = (aligned_df['a_z'] * aligned_df['dt']).cumsum()
+    T_w_i = None
+    T_w_c0_t1 = None
 
-    # Calculate position by integrating velocity (assuming initial position = 0)
-    aligned_df['position_x'] = (aligned_df['velocity_x'] * aligned_df['dt']).cumsum()
-    aligned_df['position_y'] = (aligned_df['velocity_y'] * aligned_df['dt']).cumsum()
-    aligned_df['position_z'] = (aligned_df['velocity_z'] * aligned_df['dt']).cumsum()
-
-    # Euclidean  distance between consecutive rows
-    aligned_df['displacement'] = np.sqrt(
-        (aligned_df['position_x'].diff()) ** 2 +
-        (aligned_df['position_y'].diff()) ** 2 +
-        (aligned_df['position_z'].diff()) ** 2
-    )
-
-    logger.info(f"Min displacement: {aligned_df['displacement'].min()}")
-    logger.info(f"Max displacement: {aligned_df['displacement'].max()}")
-
-    # Define a threshold
-    displacement_threshold = 0.2  # in meters, adjust as necessary
-
-    # keyframes_df = aligned_df[aligned_df['displacement'] > displacement_threshold]
-
-    # Find the next row that satisfies the threshold for each row
     keyframes_indices = []
-    i = 0
 
-    while i < len(aligned_df):
-        keyframes_indices.append(i)
-        next_row = aligned_df['displacement'][i + 1:].gt(displacement_threshold).idxmax()
+    for index, entry in aligned_df.iterrows():
+        if T_w_i is None:
+            T_w_i = to_transformation_matrix(entry)
+            T_w_c0_t1 = T_w_i @ T_i_c0
+            keyframes_indices.append(index)
+            continue
 
-        if aligned_df['displacement'][next_row] <= displacement_threshold or next_row <= i:
-            break
+        T_w_i = to_transformation_matrix(entry)
+        T_w_c0_t2 = T_w_i @ T_i_c0
 
-        i = next_row
+        R_t1 = T_w_c0_t1[:3, :3]
+        R_t2 = T_w_c0_t2[:3, :3]
+
+        R_relative = np.linalg.inv(R_t1) @ R_t2
+        euler_angles = R.from_matrix(R_relative).as_euler('xyz', degrees=True)
+        angle_norm = np.linalg.norm(euler_angles)
+
+        if angle_norm > angle_threshold:
+            keyframes_indices.append(index)
+            T_w_c0_t1 = T_w_c0_t2
+            continue
+
+        location_t1 = T_w_c0_t1[:3, 3]
+        location_t2 = T_w_c0_t2[:3, 3]
+        displacement = np.linalg.norm(location_t2 - location_t1)
+
+        if displacement > displacement_threshold:
+            keyframes_indices.append(index)
+            T_w_c0_t1 = T_w_c0_t2
 
     keyframes_df = aligned_df.iloc[keyframes_indices].reset_index(drop=True)
 
-    logger.info(f"Stats for filtered DataFrame ({track}, {cam}):")
-    logger.info(f"Shape of DataFrame: {keyframes_df.shape}")
-
+    # files_path = r"D:\thesis_code\datasets\monado_slam\MOO07_mapping_easy\mav0\cam0\data_filtered.csv"
     keyframes_df.to_csv(config.paths.basalt.keyframes_csv, index=False, header=True)
+    # keyframes_df.to_csv(files_path, index=False, header=True)
+    logger.info(f"Shape of DataFrame: {keyframes_df.shape}")
 
 
 def align_and_filter_rows():
     for track in config.task.tracks:
         config.task.track = track
 
-        logger.info(f'Align & Filter {track}')
+        logger.info(f'Filter {track}')
 
-        imu = read_imu_csv()
+        gt = read_gt_csv()
+        filenames = read_images_csv()
+        calib = read_calib_json()
 
-        for cam in tqdm(config.task.cams, total=len(config.task.cams), desc=f'Filtering keyframes : {track}',
-                        ncols=100):
-            config.task.cam = cam
+        T_i_c0 = to_transformation_matrix(calib)
 
-            aligned_df = align_rows(track, cam, imu)
-            filter_rows(track, cam, aligned_df)
+        aligned_df = align_rows(filenames, gt)
+        filter_rows(aligned_df, T_i_c0)
 
 
 def main():

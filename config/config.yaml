@@ -61,6 +61,9 @@ paths:
         aligned_csv: ${paths.roots.mav}/${task.cam}/aligned.csv
         keyframes_csv: ${paths.roots.mav}/${task.cam}/keyframes.csv
 
+        gt_csv: ${paths.roots.mav}/gt/data.csv
+        calib_json: ${paths.roots.mav}/gt/data.csv
+
         images: ${paths.roots.mav}/${task.cam}/data
         output: ${paths.roots.output}/${task.name}/${task.dataset}/${task.track}
         train_data: ${paths.roots.output}/train_waste
