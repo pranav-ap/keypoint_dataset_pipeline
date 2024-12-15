@@ -52,9 +52,9 @@ class ImageKeypoints(_Keypoints):
 
         coords = [
             cv2.KeyPoint(
-                int((x.item() + 1) * (w / 2)),
-                int((y.item() + 1) * (h / 2)),
-                1
+                (x.item() + 1) * (w / 2),
+                (y.item() + 1) * (h / 2),
+                1.
             )
             for x, y in self.normalised
         ]
@@ -255,18 +255,24 @@ class Matches:
         accepted_reference_keypoints = []
 
         for pt in reference_keypoints:
-            x_a, y_a = pt.pt
-            x_a, y_a = int(x_a), int(y_a)
+            query_x, query_y = pt.pt
+            rounded_query_y, rounded_query_x = round(query_y), round(query_x)
 
-            conf = self.certainty[y_a, x_a]
+            conf = self.certainty[rounded_query_y, rounded_query_x]
             if conf <= confidence_threshold:
                 continue
 
-            _, _, x_b, y_b = self.pixel_coords[y_a, x_a]
-            x_b, y_b = int(x_b.item()), int(y_b.item())
+            closest_ref_x, closest_ref_y, closest_tar_x, closest_tar_y = self.pixel_coords[rounded_query_y, rounded_query_x]
+            closest_ref_x, closest_ref_y, closest_tar_x, closest_tar_y = closest_ref_x.item(), closest_ref_y.item(), closest_tar_x.item(), closest_tar_y.item()
+
+            ref_y_diff = query_y - closest_ref_y
+            ref_x_diff = query_x - closest_ref_x
+
+            answer_y = closest_tar_y + ref_y_diff
+            answer_x = closest_tar_x + ref_x_diff
 
             accepted_reference_keypoints.append(pt)
-            target_keypoints.append(cv2.KeyPoint(x_b, y_b, 1.))
+            target_keypoints.append(cv2.KeyPoint(answer_x, answer_y, 1.))
 
         return accepted_reference_keypoints, target_keypoints
 
@@ -274,8 +280,8 @@ class Matches:
         original_w, original_h = config.image.original_image_shape
         crop_w, crop_h = config.image.crop_image_shape
 
-        left_padding = (original_w - crop_w) // 2
-        top_padding = (original_h - crop_h) // 2
+        left_padding = (original_w - crop_w) / 2
+        top_padding = (original_h - crop_h) / 2
 
         reference_crop_coords = [
             cv2.KeyPoint(kp.pt[0] + left_padding, kp.pt[1] + top_padding, 1.)
@@ -322,13 +328,13 @@ class Matches:
 
         reference_crop_coords = self.data_store.crop_reference_coords[pair_name][()]
         self.reference_crop_coords = [
-            cv2.KeyPoint(int(x), int(y), 1.)
+            cv2.KeyPoint(x, y, 1.)
             for x, y in reference_crop_coords
         ]
 
         target_crop_coords = self.data_store.crop_target_coords[pair_name][()]
         self.target_crop_coords = [
-            cv2.KeyPoint(int(x), int(y), 1.)
+            cv2.KeyPoint(x, y, 1.)
             for x, y in target_crop_coords
         ]
 

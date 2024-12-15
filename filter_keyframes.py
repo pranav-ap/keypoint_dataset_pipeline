@@ -3,7 +3,7 @@ import json
 import numpy as np
 import pandas as pd
 from scipy.spatial.transform import Rotation as R
-
+from pathlib import Path
 from config import config
 from utils import logger
 
@@ -27,7 +27,7 @@ def read_calib_json():
     # calib_path = r"D:/thesis_code/datasets/monado_slam/M_monado_datasets_MO_odyssey_plus_extras_calibration.json"
     with open(calib_path, 'r') as file:
         data = json.load(file)
-        data = data['value0']['T_imu_cam'][0]  # only using cam 0
+        data = data['value0']['T_imu_cam']
         return data
 
 
@@ -56,13 +56,19 @@ def read_images_csv():
     files = pd.read_csv(files_path, header=0, names=('timestamp', 'filename'))
     files['ts'] = pd.to_datetime(files['timestamp'], unit='ns')
     files = files.sort_values(by='ts').reset_index(drop=True)
+    logger.info(f"files.shape : {files.shape}")
 
-    return files
+    def image_exists(filename):
+        image_path = Path(f"{config.paths[config.task.name].images}/{filename.strip()}")
+        return image_path.exists()
+
+    filtered_files = files[files['filename'].apply(image_exists)].reset_index(drop=True)
+    logger.info(f"filtered_files.shape : {filtered_files.shape}")
+
+    return filtered_files
 
 
 def align_rows(files, gt):
-    logger.info(f'Align Rows')
-
     aligned_df = pd.merge_asof(
         files, gt,
         on="timestamp",
@@ -70,34 +76,32 @@ def align_rows(files, gt):
     ).dropna()
 
     aligned_df.to_csv(config.paths.basalt.aligned_csv, index=False, header=True)
-    logger.info(f"Shape of aligned_df: {aligned_df.shape}")
+    logger.info(f"aligned_df.shape : {aligned_df.shape}")
 
     return aligned_df
 
 
 def filter_rows(aligned_df, T_i_c0):
-    logger.info(f'Filter Keyframes')
-
     displacement_threshold = 0.02  # meters
-    angle_threshold = 20  # degrees
+    angle_threshold = 10  # degrees
 
     T_w_i = None
-    T_w_c0_t1 = None
+    T_w_c_t1 = None
 
     keyframes_indices = []
 
     for index, entry in aligned_df.iterrows():
         if T_w_i is None:
             T_w_i = to_transformation_matrix(entry)
-            T_w_c0_t1 = T_w_i @ T_i_c0
+            T_w_c_t1 = T_w_i @ T_i_c0
             keyframes_indices.append(index)
             continue
 
         T_w_i = to_transformation_matrix(entry)
-        T_w_c0_t2 = T_w_i @ T_i_c0
+        T_w_c_t2 = T_w_i @ T_i_c0
 
-        R_t1 = T_w_c0_t1[:3, :3]
-        R_t2 = T_w_c0_t2[:3, :3]
+        R_t1 = T_w_c_t1[:3, :3]
+        R_t2 = T_w_c_t2[:3, :3]
 
         R_relative = np.linalg.inv(R_t1) @ R_t2
         euler_angles = R.from_matrix(R_relative).as_euler('xyz', degrees=True)
@@ -105,23 +109,25 @@ def filter_rows(aligned_df, T_i_c0):
 
         if angle_norm > angle_threshold:
             keyframes_indices.append(index)
-            T_w_c0_t1 = T_w_c0_t2
+            T_w_c_t1 = T_w_c_t2
             continue
 
-        location_t1 = T_w_c0_t1[:3, 3]
-        location_t2 = T_w_c0_t2[:3, 3]
+        location_t1 = T_w_c_t1[:3, 3]
+        location_t2 = T_w_c_t2[:3, 3]
         displacement = np.linalg.norm(location_t2 - location_t1)
 
         if displacement > displacement_threshold:
             keyframes_indices.append(index)
-            T_w_c0_t1 = T_w_c0_t2
+            T_w_c_t1 = T_w_c_t2
 
     keyframes_df = aligned_df.iloc[keyframes_indices].reset_index(drop=True)
+    keyframes_df = keyframes_df.drop(columns=['ts_x', 'ts_y'])
+    keyframes_df.to_csv(config.paths.basalt.keyframes_csv, index=False, header=True)
 
     # files_path = r"D:\thesis_code\datasets\monado_slam\MOO07_mapping_easy\mav0\cam0\data_filtered.csv"
-    keyframes_df.to_csv(config.paths.basalt.keyframes_csv, index=False, header=True)
     # keyframes_df.to_csv(files_path, index=False, header=True)
-    logger.info(f"Shape of DataFrame: {keyframes_df.shape}")
+
+    logger.info(f"keyframes_df.shape : {keyframes_df.shape}")
 
 
 def align_and_filter_rows():
@@ -129,15 +135,24 @@ def align_and_filter_rows():
         config.task.track = track
 
         logger.info(f'Filter {track}')
+        config.task.dataset_kind = track[:2]
 
         gt = read_gt_csv()
-        filenames = read_images_csv()
-        calib = read_calib_json()
 
-        T_i_c0 = to_transformation_matrix(calib)
+        calibs = read_calib_json()
 
-        aligned_df = align_rows(filenames, gt)
-        filter_rows(aligned_df, T_i_c0)
+        for index, calib in enumerate(calibs):
+            if index == 2:
+                break
+
+            config.task.cam = f'cam{index}'
+            logger.info(f'cam{index}')
+
+            T_i_c = to_transformation_matrix(calib)
+
+            filenames = read_images_csv()
+            aligned_df = align_rows(filenames, gt)
+            filter_rows(aligned_df, T_i_c)
 
 
 def main():

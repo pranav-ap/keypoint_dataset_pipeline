@@ -5,6 +5,7 @@ import shutil
 import pandas as pd
 import torch
 from omegaconf import OmegaConf
+from pathlib import Path
 
 from config import config
 from utils import get_best_device, logger, make_clear_directory
@@ -47,13 +48,20 @@ class DataPipeline:
         df = None
 
         if config.task.use_keyframes:
-            df = pd.read_csv(config.paths[config.task.name].keyframes_csv, header=0, names=('timestamp', 'filename', 'w_x', 'w_y', 'w_z', 'a_x', 'a_y', 'a_z', 'dt', 'velocity_x', 'velocity_y', 'velocity_z', 'position_x', 'position_y', 'position_z', 'displacement'))
+            df = pd.read_csv(config.paths[config.task.name].keyframes_csv, header=0, names=('timestamp', 'filename', 'px', 'py', 'pz', 'qw', 'qx', 'qy', 'qz'))
         else:
             # use for all frames
             df = pd.read_csv(config.paths[config.task.name].images_csv, header=0, names=('timestamp', 'filename'))
             
         df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ns')
         df = df.sort_values(by='timestamp')
+
+        def image_exists(filename):
+            image_path = Path(f"{config.paths[config.task.name].images}/{filename.strip()}")
+            return image_path.exists()
+
+        df = df[df['filename'].apply(image_exists)].reset_index(drop=True)
+
         df['filename'] = df['filename'].str.replace(".png", "", regex=False)
         image_names = df['filename'].tolist()
 
