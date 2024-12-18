@@ -2,6 +2,7 @@ libs/
 output/
 output_all/
 output_filtered/
+output_filtered_testing/
 tensors/
 zips/
 *.hdf5

@@ -17,17 +17,18 @@ task:
     track: MOO07_mapping_easy
     tracks:
         - MOO07_mapping_easy
-        - MOO09_short_1_updown
-        - MOO10_short_2_panorama
-        - MOO11_short_3_backandforth
-        - MGO07_mapping_easy
-        - MGO08_mapping_hard
+        # - MOO09_short_1_updown
+        # - MOO10_short_2_panorama
+        # - MOO11_short_3_backandforth
+        # - MGO07_mapping_easy
+        # - MGO08_mapping_hard
 
-        # check all 
-        - MGO13_sudden_movements
-        - MGO14_flickering_light
-        - MOO04_hand_shooter_hard 
-        - MOO08_mapping_hard
+        # - MOO08_mapping_hard
+        # - MGO13_sudden_movements
+
+        # run later
+        # - MGO14_flickering_light
+        # - MOO04_hand_shooter_hard 
 
     cam: cam0
     cams:
@@ -48,7 +49,7 @@ paths:
         # ws: D:/thesis_code
         mav: ${paths.roots.ws}/datasets/${task.dataset}/${task.track}/mav0
         project: ${paths.roots.ws}/keypoint_dataset_pipeline
-        output: ${paths.roots.project}/output_filtered
+        output: ${paths.roots.project}/output_filtered_testing
 
     samples:
         images: ${paths.roots.project}/data/samples/images

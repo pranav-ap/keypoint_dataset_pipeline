@@ -48,7 +48,7 @@ class DataPipeline:
         df = None
 
         if config.task.use_keyframes:
-            df = pd.read_csv(config.paths[config.task.name].keyframes_csv, header=0, names=('timestamp', 'filename', 'px', 'py', 'pz', 'qw', 'qx', 'qy', 'qz'))
+            df = pd.read_csv(config.paths[config.task.name].keyframes_csv, header=0, names=('timestamp', 'filename', 'px', 'py', 'pz', 'qw', 'qx', 'qy', 'qz'), usecols=('timestamp', 'filename'))
         else:
             # use for all frames
             df = pd.read_csv(config.paths[config.task.name].images_csv, header=0, names=('timestamp', 'filename'))
@@ -81,6 +81,7 @@ class DataPipeline:
 
     def run(self):
         logger.info('Data Pipeline has started running!')
+        torch.cuda.empty_cache()
 
         try:
             logger.info(f'Clear Directory : {config.paths[config.task.name].output}')
@@ -103,7 +104,7 @@ class DataPipeline:
                 for cam in config.task.cams:
                     logger.info(f'Camera {cam}')
                     config.task.cam = cam
-                    torch.cuda.empty_cache()
+                    # torch.cuda.empty_cache()
                     gc.collect()
                     self._process_images()
 

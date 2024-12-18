@@ -82,8 +82,8 @@ def align_rows(files, gt):
 
 
 def filter_rows(aligned_df, T_i_c0):
-    displacement_threshold = 0.02  # meters
-    angle_threshold = 10  # degrees
+    displacement_threshold = 0.02  # meters - 2 cm
+    angle_threshold = 20 # 10  # degrees
 
     T_w_i = None
     T_w_c_t1 = None
