@@ -147,13 +147,10 @@ def filter_rows(aligned_df, T_i_c, intrinsics):
 def filter_blurred_rows(aligned_df, T_i_c, intrinsics):
     blur_threshold = config.task.blur_threshold  
 
-    T_w_i = None
-    T_w_c_t1 = None
-
     keyframes_indices = []
     
-    for i in range(len(df) - 1):
-        row1, row2 = df.iloc[i], df.iloc[i + 1]
+    for i in range(len(aligned_df) - 1):
+        row1, row2 = aligned_df.iloc[i], aligned_df.iloc[i + 1]
         
         T_w_i = to_transformation_matrix(entry)
         T_w_c_t1 = T_w_i @ T_i_c
@@ -182,60 +179,10 @@ def filter_blurred_rows(aligned_df, T_i_c, intrinsics):
         result = np.linalg.norm(a - b)
 
         if result > blur_threshold:
-            keyframes_indices.append(index)
-            T_w_c_t1 = T_w_c_t2
-            continue
-     
-    keyframes_df = aligned_df.iloc[keyframes_indices].reset_index(drop=True)
-    keyframes_df = keyframes_df.drop(columns=['ts_x', 'ts_y'])
-    keyframes_df.to_csv(config.paths.basalt.keyframes_csv, index=False, header=True)
-
-    if config.task.output_folder_name == 'output_filtered_test':
-        image_names = keyframes_df['filename'].tolist()
-
-        for name in image_names:
-            image_path_from = Path(f"{config.paths[config.task.name].images}/{name.strip()}")
-            image_path_to = Path(f"{config.paths[config.task.name].output_cam}/images/{name.strip()}")
-            shutil.copy(image_path_from, image_path_to)
-
-    logger.info(f"keyframes_df.shape : {keyframes_df.shape}")
-
-
-        
-    for index, entry in aligned_df.iterrows():
-        if T_w_i is None:
-            T_w_i = to_transformation_matrix(entry)
-            T_w_c_t1 = T_w_i @ T_i_c
-            keyframes_indices.append(index)
-            continue
-
-        T_w_i = to_transformation_matrix(entry)
-        T_w_c_t2 = T_w_i @ T_i_c
-
-        scaled_z = 2 * np.array([0, 0, 1, 1]) # added 1 for homogenous T
-        V = np.linalg.inv(T_w_c_t2) @ T_w_c_t1 @ scaled_z 
-
-        x, y, z = V[0], V[1], V[2]
-
-        fx, fy = intrinsics['fx'], intrinsics['fy']
-        cx, cy = intrinsics['cx'], intrinsics['cy']
-
-        a = np.array([
-            config.image.crop_image_shape[0] / 2, 
-            config.image.crop_image_shape[1] / 2
-        ])
-
-        b = np.array([
-            (fx * x / z) + cx, 
-            (fy * y / z) + cy,
-        ])
-
-        result = np.linalg.norm(a - b)
-
-        if result > blur_threshold:
-            keyframes_indices.append(index)
-            T_w_c_t1 = T_w_c_t2
-            continue
+            if i not in keyframes_indices:
+                keyframes_indices.append(i)
+            if i + 1 not in keyframes_indices:
+                keyframes_indices.append(i + 1)
      
     keyframes_df = aligned_df.iloc[keyframes_indices].reset_index(drop=True)
     keyframes_df = keyframes_df.drop(columns=['ts_x', 'ts_y'])

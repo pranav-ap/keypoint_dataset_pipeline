@@ -15,7 +15,7 @@ task:
     angle_threshold: 20  # 20 degrees
 
     use_blur_filter: True
-    blur_threshold: 30
+    blur_threshold: 20
     
     dataset: monado_slam  # euroc monado_slam
     dataset_kind: MO
