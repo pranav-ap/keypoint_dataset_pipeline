@@ -25,7 +25,7 @@ task:
 
     extract_from_all_tracks: True  # True False
 
-    track: MOO01_hand_puncher_1
+    track: MOO07_mapping_easy
     tracks:
         # - MOO01_hand_puncher_1
         # - MOO02_hand_puncher_2
@@ -33,9 +33,9 @@ task:
         # - MOO04_hand_shooter_hard
         # - MOO05_inspect_easy
         # - MOO06_inspect_hard
+        - MOO09_short_1_updown
         - MOO07_mapping_easy
         # - MOO08_mapping_hard
-        - MOO09_short_1_updown
         # - MOO10_short_2_panorama
         # - MOO11_short_3_backandforth
         # - MOO13_sudden_movements

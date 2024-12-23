@@ -84,9 +84,10 @@ class DataPipeline:
         torch.cuda.empty_cache()
 
         try:
-            logger.info(f'Clear Directory : {config.paths[config.task.name].output}')
-            
+            config.task.dataset_kind = config.task.track[:2]
+
             if config.task.frame_filtering.startswith('all'):
+                logger.info(f'Clear Directory : {config.paths[config.task.name].output}')
                 make_clear_directory(config.paths[config.task.name].output)
 
             logger.info('Save Current Config')
@@ -119,10 +120,10 @@ class DataPipeline:
         logger.info('Data Pipeline has started running!')
         torch.cuda.empty_cache()
 
-        try:
-            for track in config.task.tracks:
-                config.task.track = track
+        for track in config.task.tracks:
+            config.task.track = track
 
+            try:
                 logger.info(f'Filter {track}')
                 config.task.dataset_kind = track[:2]
 
@@ -151,7 +152,7 @@ class DataPipeline:
                         gc.collect()
                         self._process_images()
 
-        finally:
-            self.data_store.close()
+            finally:
+                self.data_store.close()
 
         logger.info('Data Pipeline has finished running!')
