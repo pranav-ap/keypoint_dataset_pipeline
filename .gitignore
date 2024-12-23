@@ -1,8 +1,6 @@
 libs/
 output/
-output_all/
-output_filtered/
-output_filtered_test/
+output*/
 tensors/
 zips/
 *.hdf5

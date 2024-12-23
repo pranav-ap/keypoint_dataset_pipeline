@@ -47,11 +47,11 @@ class DataPipeline:
         
         df = None
 
-        if config.task.use_keyframes:
-            df = pd.read_csv(config.paths[config.task.name].keyframes_csv, header=0, names=('timestamp', 'filename', 'px', 'py', 'pz', 'qw', 'qx', 'qy', 'qz'), usecols=('timestamp', 'filename'))
+        if 'all' in config.task.frame_filtering:
+            # use all frames
+            df = pd.read_csv(config.paths[config.task.name].images_csv, header=0, names=('timestamp', 'filename'))            
         else:
-            # use for all frames
-            df = pd.read_csv(config.paths[config.task.name].images_csv, header=0, names=('timestamp', 'filename'))
+            df = pd.read_csv(config.paths[config.task.name].keyframes_csv, header=0, names=('timestamp', 'filename', 'px', 'py', 'pz', 'qw', 'qx', 'qy', 'qz'), usecols=('timestamp', 'filename'))
             
         df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ns')
         df = df.sort_values(by='timestamp')

@@ -133,7 +133,7 @@ def filter_rows(aligned_df, T_i_c, intrinsics):
     keyframes_df = keyframes_df.drop(columns=['ts_x', 'ts_y'])
     keyframes_df.to_csv(config.paths.basalt.keyframes_csv, index=False, header=True)
 
-    if config.task.output_folder_name == 'output_filtered_test':
+    if 'test' in config.task.output_folder_name:
         image_names = keyframes_df['filename'].tolist()
 
         for name in image_names:
@@ -189,7 +189,7 @@ def filter_blurred_rows(aligned_df, T_i_c, intrinsics):
     keyframes_df = keyframes_df.drop(columns=['ts_x', 'ts_y'])
     keyframes_df.to_csv(config.paths.basalt.keyframes_csv, index=False, header=True)
 
-    if config.task.output_folder_name == 'output_filtered_test':
+    if 'test' in config.task.output_folder_name:
         image_names = keyframes_df['filename'].tolist()
 
         for name in image_names:
@@ -228,10 +228,12 @@ def align_and_filter_rows():
             filenames = read_images_csv()
             aligned_df = align_rows(filenames, gt)
 
-            if config.task.use_blur_filter:
+            if 'blur' in config.task.frame_filtering:
                 filter_blurred_rows(aligned_df, T_i_c, intrinsics)
-            else:
+            elif 'normal' in config.task.frame_filtering:
                 filter_rows(aligned_df, T_i_c, intrinsics)
+            else:
+                logger.error('Unsupported frame filtering type')
 
 
 def main():
