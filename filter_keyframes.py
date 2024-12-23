@@ -152,13 +152,13 @@ def filter_blurred_rows(aligned_df, T_i_c, intrinsics):
     for i in range(len(aligned_df) - 1):
         row1, row2 = aligned_df.iloc[i], aligned_df.iloc[i + 1]
         
-        T_w_i = to_transformation_matrix(entry)
+        T_w_i = to_transformation_matrix(row1)
         T_w_c_t1 = T_w_i @ T_i_c
 
-        T_w_i = to_transformation_matrix(entry)
+        T_w_i = to_transformation_matrix(row2)
         T_w_c_t2 = T_w_i @ T_i_c
 
-        scaled_z = 2 * np.array([0, 0, 1, 1]) # added 1 for homogenous T
+        scaled_z = 2 * np.array([0, 0, 1, 1]) 
         V = np.linalg.inv(T_w_c_t2) @ T_w_c_t1 @ scaled_z 
 
         x, y, z = V[0], V[1], V[2]
@@ -179,6 +179,7 @@ def filter_blurred_rows(aligned_df, T_i_c, intrinsics):
         result = np.linalg.norm(a - b)
 
         if result > blur_threshold:
+            # print(result)
             if i not in keyframes_indices:
                 keyframes_indices.append(i)
             if i + 1 not in keyframes_indices:
