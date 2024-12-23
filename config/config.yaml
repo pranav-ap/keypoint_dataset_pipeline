@@ -9,15 +9,24 @@ task:
     # basalt related
     
     limit_count: 0
+
     use_keyframes: True # True False
+    displacement_threshold: 20  # 20 cm
+    angle_threshold: 20  # 20 degrees
+
+    use_blur_filter: True
+    blur_threshold: 30
     
     dataset: monado_slam  # euroc monado_slam
     dataset_kind: MO
+    
+    # output_all output_filtered output_filtered_test
+    output_folder_name: output_filtered_test 
 
-    track: MOO07_mapping_easy
+    track: MOO09_short_1_updown
     tracks:
         - MOO07_mapping_easy
-        # - MOO09_short_1_updown
+        - MOO09_short_1_updown
         # - MOO10_short_2_panorama
         # - MOO11_short_3_backandforth
         # - MGO07_mapping_easy
@@ -35,21 +44,13 @@ task:
         - cam0
         - cam1
 
-samples:
-    samples:
-        reference: toronto_A.jpg
-        target: toronto_B.jpg
-    basalt:
-        reference: 8657652230990
-        target: 8657685519990
-
 paths:
     roots:
         ws: /home/stud/ath/ath_ws
         # ws: D:/thesis_code
         mav: ${paths.roots.ws}/datasets/${task.dataset}/${task.track}/mav0
         project: ${paths.roots.ws}/keypoint_dataset_pipeline
-        output: ${paths.roots.project}/output_filtered_testing
+        output: ${paths.roots.project}/${task.output_folder_name}
 
     samples:
         images: ${paths.roots.project}/data/samples/images
@@ -58,14 +59,15 @@ paths:
         images_csv: ${paths.roots.mav}/${task.cam}/data.csv
         imu_csv: ${paths.roots.mav}/imu0/data.csv
 
-        aligned_csv: ${paths.roots.mav}/${task.cam}/aligned.csv
-        keyframes_csv: ${paths.roots.mav}/${task.cam}/keyframes.csv
-
         gt_csv: ${paths.roots.mav}/gt/data.csv
         calib_json: ${paths.roots.ws}/datasets/${task.dataset}/calib/${task.dataset_kind}_calibration.json
 
         images: ${paths.roots.mav}/${task.cam}/data
+
         output: ${paths.roots.output}/${task.name}/${task.dataset}/${task.track}
+        output_cam: ${paths.basalt.output}/${task.cam}
+        aligned_csv: ${paths.basalt.output_cam}/aligned.csv
+        keyframes_csv: ${paths.basalt.output_cam}/keyframes.csv
         train_data: ${paths.roots.output}/train
 
 image:
@@ -85,3 +87,12 @@ roma:
     filter:
         # keep matches over the absolute confidence threshold
         confidence_threshold: 0.6
+
+samples:
+    samples:
+        reference: toronto_A.jpg
+        target: toronto_B.jpg
+    basalt:
+        reference: 8657652230990
+        target: 8657685519990
+
