@@ -47,7 +47,7 @@ class DataPipeline:
         
         df = None
 
-        if 'all' in config.task.frame_filtering:
+        if config.task.frame_filtering.startswith('all'):
             # use all frames
             df = pd.read_csv(config.paths[config.task.name].images_csv, header=0, names=('timestamp', 'filename'))            
         else:
@@ -85,7 +85,9 @@ class DataPipeline:
 
         try:
             logger.info(f'Clear Directory : {config.paths[config.task.name].output}')
-            make_clear_directory(config.paths[config.task.name].output)
+            
+            if config.task.frame_filtering.startswith('all'):
+                make_clear_directory(config.paths[config.task.name].output)
 
             logger.info('Save Current Config')
             config_filepath = f'{config.paths[config.task.name].output}/config.yaml'
@@ -107,6 +109,47 @@ class DataPipeline:
                     # torch.cuda.empty_cache()
                     gc.collect()
                     self._process_images()
+
+        finally:
+            self.data_store.close()
+
+        logger.info('Data Pipeline has finished running!')
+
+    def run_list(self):
+        logger.info('Data Pipeline has started running!')
+        torch.cuda.empty_cache()
+
+        try:
+            for track in config.task.tracks:
+                config.task.track = track
+
+                logger.info(f'Filter {track}')
+                config.task.dataset_kind = track[:2]
+
+                if config.task.frame_filtering.startswith('all'):
+                    logger.info(f'Clear Directory : {config.paths[config.task.name].output}')
+                    make_clear_directory(config.paths[config.task.name].output)
+
+                logger.info('Save Current Config')
+                config_filepath = f'{config.paths[config.task.name].output}/config.yaml'
+                OmegaConf.save(config, config_filepath)
+
+                if config.task.consider_samples:
+                    self._process_images()
+                else:
+                    # Copy IMU Data
+                    shutil.copy(
+                        config.paths[config.task.name].imu_csv,
+                        f'{config.paths[config.task.name].output}/imu_data.csv'
+                    )
+
+                    # Process Images
+                    for cam in config.task.cams:
+                        logger.info(f'Camera {cam}')
+                        config.task.cam = cam
+                        # torch.cuda.empty_cache()
+                        gc.collect()
+                        self._process_images()
 
         finally:
             self.data_store.close()

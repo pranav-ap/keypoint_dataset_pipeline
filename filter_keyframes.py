@@ -193,8 +193,9 @@ def filter_blurred_rows(aligned_df, T_i_c, intrinsics):
         image_names = keyframes_df['filename'].tolist()
 
         for name in image_names:
-            image_path_from = Path(f"{config.paths[config.task.name].images}/{name.strip()}")
-            image_path_to = Path(f"{config.paths[config.task.name].output_cam}/images/{name.strip()}")
+            image_path_from = Path(f"{config.paths.basalt.images}/{name.strip()}")
+            make_clear_directory(f'{config.paths.basalt.output_cam}/images')
+            image_path_to = Path(f"{config.paths.basalt.output_cam}/images/{name.strip()}")
             shutil.copy(image_path_from, image_path_to)
 
     logger.info(f"keyframes_df.shape : {keyframes_df.shape}")
@@ -219,7 +220,6 @@ def align_and_filter_rows():
             logger.info(f'cam{index}')
 
             make_clear_directory(config.paths.basalt.output_cam)
-            make_clear_directory(f'{config.paths.basalt.output_cam}/images')
 
             T_i_c = to_transformation_matrix(T)
 
@@ -228,9 +228,9 @@ def align_and_filter_rows():
             filenames = read_images_csv()
             aligned_df = align_rows(filenames, gt)
 
-            if 'blur' in config.task.frame_filtering:
+            if config.task.frame_filtering.startswith('blur'):
                 filter_blurred_rows(aligned_df, T_i_c, intrinsics)
-            elif 'normal' in config.task.frame_filtering:
+            elif config.task.frame_filtering.startswith('normal'): 
                 filter_rows(aligned_df, T_i_c, intrinsics)
             else:
                 logger.error('Unsupported frame filtering type')
