@@ -15,7 +15,7 @@ task:
     angle_threshold: 20  # 20 degrees
 
     use_blur_filter: True
-    blur_threshold: 25
+    blur_threshold: 20
     
     dataset: monado_slam  # euroc monado_slam
     dataset_kind: MO
@@ -27,17 +27,13 @@ task:
     tracks:
         - MOO07_mapping_easy
         - MOO09_short_1_updown
-        # - MOO10_short_2_panorama
-        # - MOO11_short_3_backandforth
-        # - MGO07_mapping_easy
-        # - MGO08_mapping_hard
+        - MOO10_short_2_panorama
+        - MOO11_short_3_backandforth
+        - MGO07_mapping_easy
+        - MGO08_mapping_hard
 
-        # - MOO08_mapping_hard
-        # - MGO13_sudden_movements
-
-        # run later
-        # - MGO14_flickering_light
-        # - MOO04_hand_shooter_hard 
+        - MOO08_mapping_hard
+        - MGO13_sudden_movements
 
     cam: cam0
     cams:

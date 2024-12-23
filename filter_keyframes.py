@@ -180,8 +180,8 @@ def filter_blurred_rows(aligned_df, T_i_c, intrinsics):
 
         if result > blur_threshold:
             # print(result)
-            if i not in keyframes_indices:
-                keyframes_indices.append(i)
+            # if i not in keyframes_indices:
+            #     keyframes_indices.append(i)
             if i + 1 not in keyframes_indices:
                 keyframes_indices.append(i + 1)
      
