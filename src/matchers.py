@@ -33,8 +33,12 @@ class RoMaMatcher(KeypointMatcher):
     def extract_warp_certainty(self, image_names):
         a: Optional[Keypoints] = None
 
-        for name_a, name_b in tqdm(zip(image_names, image_names[1:]), desc="Extracting warps", ncols=100,
-                                   total=len(image_names) - 1):
+        for name_a, name_b in tqdm(
+            zip(image_names, image_names[1:]), 
+            desc="Extracting warps", 
+            ncols=100,
+            total=len(image_names) - 1,
+            ):
             if a is None:
                 a = Keypoints(name_a, self.data_store)
 

@@ -89,8 +89,8 @@ class TrainingDatasetCreator:
     def extract(self):
         for track in config.task.tracks:
             config.task.track = track
-
-            logger.info(f'Extracting Coordinates : {track}')
+            logger.info(f'Track : {track}')
+            config.task.dataset_kind = track[:2]
 
             filepath = f'{config.paths[config.task.name].output}/data.hdf5'
             # noinspection PyAttributeOutsideInit
@@ -98,6 +98,7 @@ class TrainingDatasetCreator:
 
             for cam in tqdm(config.task.cams, total=2, desc="Extracting Original Coordinates", ncols=100):
                 config.task.cam = cam
+                logger.info(f'Cam : {cam}')
 
                 refs_from = input_file[f'{cam}/matches/crop/reference_coords']
                 tars_from = input_file[f'{cam}/matches/crop/target_coords']
