@@ -71,6 +71,19 @@ class Painter:
 
         return image_vis
 
+    def _show_one_match(self, pair, left_coords, right_coords, index, on_original_image=False):
+        image_a = pair.a.original_image if on_original_image else pair.a.image
+        image_b = pair.b.original_image if on_original_image else pair.b.image
+
+        x, y = left_coords[index], right_coords[index]
+        image_vis = self._draw_matches(image_a, image_b, [x], [y])
+        image_vis = self._to_image(image_vis)
+
+        draw = ImageDraw.Draw(image_vis)
+        # draw.line((image_vis.width / 2, 0, image_vis.width / 2, image_vis.height), fill="white", width=2)
+
+        return image_vis, image_a, image_b, x, y
+
     def show_matches(self, name_a, name_b):
         pair = Matches.load_from_names(name_a, name_b, self.data_store)
         coords = pair.a.image_keypoints.as_image_coords()
@@ -88,6 +101,13 @@ class Painter:
         logger.info(f'Number of Matches {num_points}')
 
         return self._show_matches(pair, pair.reference_crop_coords, pair.target_crop_coords)
+
+    def show_one_match(self, name_a, name_b, index=0):
+        pair = Matches.load_from_names(name_a, name_b, self.data_store, load_coords=True)
+        num_points = len(pair.reference_crop_coords)
+        logger.info(f'Number of Matches {num_points}')
+
+        return self._show_one_match(pair, pair.reference_crop_coords, pair.target_crop_coords, index)
 
     def show_matches_on_original_image(self, name_a, name_b):
         pair: Matches = Matches.load_from_names(name_a, name_b, self.data_store, load_coords=True)

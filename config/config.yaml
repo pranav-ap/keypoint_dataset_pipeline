@@ -15,7 +15,7 @@ task:
     
     # all normal blur
     # all_test normal_test blur_test
-    frame_filtering: normal  
+    frame_filtering: normal
 
     blur_threshold: 30
     displacement_threshold: 20  # 20 cm 

@@ -52,7 +52,7 @@ def r(angle: float) -> VectorN:
     tpatch1 = PATCH + C1
     tpatch2 = PATCH @ R(angle).T + C2
     i1 = zeros(N)
-    i2 = zeros(N)
+    i2 = zeros(N) 
     batch_interp(IMG1, tpatch1[:, 0], tpatch1[:, 1], out=i1)
     batch_interp(IMG2, tpatch2[:, 0], tpatch2[:, 1], out=i2)
     i1 /= i1.mean()

@@ -116,7 +116,7 @@ class Keypoints:
         return cropped_image
 
     def _init_image(self) -> Tuple[Image.Image, Image.Image]:
-        assert os.path.exists(self.image_path)
+        assert os.path.exists(self.image_path), self.image_path
         image = Image.open(self.image_path)
         original_image = image.copy()
 
