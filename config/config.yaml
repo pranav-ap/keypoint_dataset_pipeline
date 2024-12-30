@@ -15,9 +15,9 @@ task:
     
     # all normal blur
     # all_test normal_test blur_test
-    frame_filtering: normal
+    frame_filtering: blur
 
-    blur_threshold: 30
+    blur_threshold: 50
     displacement_threshold: 20  # 20 cm 
     angle_threshold: 20  # 20 degrees
     
@@ -92,7 +92,7 @@ image:
     crop_image_shape: [ 630, 476 ] # [504, 504] [630, 476]
 
 dedode:
-    batch_size: 6
+    batch_size: 2
     image_keypoints_count: 400
 
     filter:

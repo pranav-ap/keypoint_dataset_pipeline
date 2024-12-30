@@ -180,10 +180,13 @@ def filter_blurred_rows(aligned_df, T_i_c, intrinsics):
 
         if result > blur_threshold:
             # print(result)
-            # if i not in keyframes_indices:
-            #     keyframes_indices.append(i)
+            if i not in keyframes_indices:
+                keyframes_indices.append(i)
             if i + 1 not in keyframes_indices:
                 keyframes_indices.append(i + 1)
+    
+    if len(keyframes_indices) <= 1:
+        keyframes_indices = []
      
     keyframes_df = aligned_df.iloc[keyframes_indices].reset_index(drop=True)
     keyframes_df = keyframes_df.drop(columns=['ts_x', 'ts_y'])
@@ -192,9 +195,10 @@ def filter_blurred_rows(aligned_df, T_i_c, intrinsics):
     if 'test' in config.task.output_folder_name:
         image_names = keyframes_df['filename'].tolist()
 
+        make_clear_directory(f'{config.paths.basalt.output_cam}/images')
+
         for name in image_names:
             image_path_from = Path(f"{config.paths.basalt.images}/{name.strip()}")
-            make_clear_directory(f'{config.paths.basalt.output_cam}/images')
             image_path_to = Path(f"{config.paths.basalt.output_cam}/images/{name.strip()}")
             shutil.copy(image_path_from, image_path_to)
 
