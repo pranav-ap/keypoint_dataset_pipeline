@@ -116,4 +116,4 @@ class Painter:
         num_points = len(left_coords)
         logger.info(f'Number of Matches {num_points}')
 
-        return self._show_matches(pair, left_coords, right_coords)
+        return self._show_matches(pair, left_coords, right_coords, on_original_image=True)

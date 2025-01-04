@@ -19,8 +19,8 @@ class TrainingDatasetCreator:
         original_w, original_h = config.image.original_image_shape
         crop_w, crop_h = config.image.crop_image_shape
 
-        left_padding = (original_w - crop_w) // 2
-        top_padding = (original_h - crop_h) // 2
+        left_padding = (original_w - crop_w) / 2
+        top_padding = (original_h - crop_h) / 2
 
         reference_crop_coords = np.array([
             (kp[0] + left_padding, kp[1] + top_padding)

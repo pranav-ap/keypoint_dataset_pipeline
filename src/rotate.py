@@ -22,7 +22,7 @@ array = lambda x: np.array(x, dtype=np.float32)
 zeros = lambda n: np.zeros(n, dtype=np.float32)
 
 
-def get_circle_patch(RADIUS=3, ANGLES=6, SCALE=1):
+def get_circle_patch(RADIUS=5, ANGLES=6, SCALE=1):
     "Circle patch"
     patch = array(
         [

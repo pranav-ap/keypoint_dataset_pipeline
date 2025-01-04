@@ -124,7 +124,7 @@ class Keypoints:
             w, h = config.image.crop_image_shape
             image = self.crop_from_center(image, w, h)
 
-        image = image.convert('RGB')
+        # image = image.convert('RGB')
 
         return original_image, image
 
@@ -280,8 +280,13 @@ class Matches:
         original_w, original_h = config.image.original_image_shape
         crop_w, crop_h = config.image.crop_image_shape
 
+        print(f'original_w, original_h {original_w, original_h}')
+        print(f'crop_w, crop_h {crop_w, crop_h}')
+
         left_padding = (original_w - crop_w) / 2
         top_padding = (original_h - crop_h) / 2
+
+        print(f'left_padding, top_padding {left_padding, top_padding}')
 
         reference_crop_coords = [
             cv2.KeyPoint(kp.pt[0] + left_padding, kp.pt[1] + top_padding, 1.)

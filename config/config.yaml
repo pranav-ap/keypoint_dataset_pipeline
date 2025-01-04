@@ -15,7 +15,7 @@ task:
     
     # all normal blur
     # all_test normal_test blur_test
-    frame_filtering: blur
+    frame_filtering: normal
 
     blur_threshold: 50
     displacement_threshold: 20  # 20 cm 
@@ -25,7 +25,7 @@ task:
 
     extract_from_all_tracks: True  # True False
 
-    track: MOO09_short_1_updown
+    track: MOO13_sudden_movements
     tracks:
         - MOO01_hand_puncher_1
         - MOO02_hand_puncher_2

@@ -52,6 +52,9 @@ class DataPipeline:
             df = pd.read_csv(config.paths[config.task.name].images_csv, header=0, names=('timestamp', 'filename'))            
         else:
             df = pd.read_csv(config.paths[config.task.name].keyframes_csv, header=0, names=('timestamp', 'filename', 'px', 'py', 'pz', 'qw', 'qx', 'qy', 'qz'), usecols=('timestamp', 'filename'))
+        
+        if len(df) == 0:
+            return []
             
         df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ns')
         df = df.sort_values(by='timestamp')
@@ -75,6 +78,10 @@ class DataPipeline:
         self.data_store.init()
 
         image_names = self.get_image_names()
+
+        # if len(image_names) == 0:
+        #     return
+
         self.detector.extract_keypoints(image_names)
         self.matcher.extract_warp_certainty(image_names)
         self.data_filter.extract_good_matches(image_names)
