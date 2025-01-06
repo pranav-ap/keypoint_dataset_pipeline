@@ -35,15 +35,17 @@ class TrainingDatasetCreator:
 
         return reference_crop_coords, target_crop_coords
 
-    def extract_coords(self, refs_from, tars_from, refs_to, tars_to, indices_to, rotations_to):
-        for (pair_name, ref_dataset), (_, tar_dataset) in zip(refs_from.items(), tars_from.items()):
+    def extract_coords(self, refs_from, tars_from, rotations_from, refs_to, tars_to, indices_to, rotations_to):
+        for (pair_name, ref_dataset), (_, tar_dataset), (_, rot_dataset) in zip(refs_from.items(), tars_from.items(), rotations_from.items()):
             if not isinstance(ref_dataset, h5py.Dataset) or not isinstance(tar_dataset, h5py.Dataset):
                 continue
 
             reference_crop_coords = ref_dataset[()]
             target_crop_coords = tar_dataset[()]
+            rot_values = rot_dataset[()]
+
             # assert len(reference_crop_coords) > 0, f'{pair_name} is empty'
-            assert len(reference_crop_coords) == len(target_crop_coords)
+            assert len(reference_crop_coords) == len(target_crop_coords) == len(rot_values)
 
             if len(reference_crop_coords) == 0:
                 continue
@@ -65,27 +67,6 @@ class TrainingDatasetCreator:
             patch_indices = list(range(reference_coords_len)) 
             indices_to.create_dataset(pair_name, data=patch_indices, compression='lzf')
 
-            # Rotation
-
-            a, b = pair_name.split('_')
-
-            image_path_a: str = f"{config.paths[config.task.name].images}/{a}.png"
-            image_path_b: str = f"{config.paths[config.task.name].images}/{b}.png"
-            
-            rotations = []
-
-            for i in range(len(reference_orig_coords)):
-                angle = solve_patch_rotation(
-                    image_path_a, image_path_b,
-                    np.array([reference_orig_coords[i][0], reference_orig_coords[i][1]]),
-                    np.array([target_orig_coords[i][0], target_orig_coords[i][1]]),
-                )
-
-                # if a == '8973701570490' and b == '8973934596190' and i == 12:
-                #     print(f'yay {angle}')
-
-                rotations.append(angle)
-
             rotations_to.create_dataset(pair_name, data=rotations, compression='lzf')
 
     def extract(self):
@@ -105,13 +86,14 @@ class TrainingDatasetCreator:
 
                 refs_from = input_file[f'{cam}/matches/crop/reference_coords']
                 tars_from = input_file[f'{cam}/matches/crop/target_coords']
+                rotations_from = input_file[f'{cam}/rotationsss']  # sss not s
 
                 refs_to = self._file.create_group(f'{track}/{cam}/reference_coords')
                 tars_to = self._file.create_group(f'{track}/{cam}/target_coords')
                 indices_to = self._file.create_group(f'{track}/{cam}/indices')
-                rotations_to = self._file.create_group(f'{track}/{cam}/rotations')
+                rotations_to = self._file.create_group(f'{track}/{cam}/rotations') # s not ss
 
-                self.extract_coords(refs_from, tars_from, refs_to, tars_to, indices_to, rotations_to)
+                self.extract_coords(refs_from, tars_from, rotations_from, refs_to, tars_to, indices_to, rotations_to)
         
             input_file.close()
 

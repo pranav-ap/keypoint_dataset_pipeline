@@ -91,7 +91,7 @@ class RotationInfoWriter:
 
                 refs_from = f[f'{cam}/matches/crop/reference_coords']
                 tars_from = f[f'{cam}/matches/crop/target_coords']
-                rotations_to = f.create_group(f'{cam}/rotationss')
+                rotations_to = f.create_group(f'{cam}/rotationsss')
 
                 self.extract_coords(refs_from, tars_from, rotations_to)
         
