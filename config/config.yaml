@@ -21,39 +21,39 @@ task:
     displacement_threshold: 20  # 20 cm 
     angle_threshold: 20  # 20 degrees
     
-    output_folder_name: output_${task.frame_filtering}
+    output_folder_name: output_${task.frame_filtering}_copy
 
     extract_from_all_tracks: True  # True False
 
-    track: MOO13_sudden_movements
+    track: MOO10_short_2_panorama
     tracks:
         - MOO01_hand_puncher_1
-        # - MOO02_hand_puncher_2
-        # - MOO03_hand_shooter_easy
-        # - MOO04_hand_shooter_hard
-        # - MOO05_inspect_easy
-        # - MOO06_inspect_hard
-        # - MOO07_mapping_easy
-        # - MOO08_mapping_hard
-        # - MOO09_short_1_updown
-        # - MOO10_short_2_panorama
-        # - MOO11_short_3_backandforth
-        # - MOO13_sudden_movements
-        # - MOO14_flickering_light
+        - MOO02_hand_puncher_2
+        - MOO03_hand_shooter_easy
+        - MOO04_hand_shooter_hard
+        - MOO05_inspect_easy
+        - MOO06_inspect_hard
+        - MOO07_mapping_easy
+        - MOO08_mapping_hard
+        - MOO09_short_1_updown
+        - MOO10_short_2_panorama
+        - MOO11_short_3_backandforth
+        - MOO13_sudden_movements
+        - MOO14_flickering_light
 
-        # - MGO01_low_light
-        # - MGO02_hand_puncher
-        # - MGO03_hand_shooter_easy
-        # - MGO04_hand_shooter_hard
-        # - MGO05_inspect_easy
-        # - MGO06_inspect_hard
-        # - MGO07_mapping_easy
-        # - MGO08_mapping_hard
-        # - MGO09_short_1_updown
-        # - MGO10_short_2_panorama
-        # - MGO11_short_3_backandforth
-        # - MGO13_sudden_movements
-        # - MGO14_flickering_light
+        - MGO01_low_light
+        - MGO02_hand_puncher
+        - MGO03_hand_shooter_easy
+        - MGO04_hand_shooter_hard
+        - MGO05_inspect_easy
+        - MGO06_inspect_hard
+        - MGO07_mapping_easy
+        - MGO08_mapping_hard
+        - MGO09_short_1_updown
+        - MGO10_short_2_panorama
+        - MGO11_short_3_backandforth
+        - MGO13_sudden_movements
+        - MGO14_flickering_light
 
     cam: cam0
     cams:

@@ -9,12 +9,7 @@ from config import config
 from utils import logger
 
 
-class TrainingDatasetCreator:
-    def __init__(self):
-        filename = 'train_data.hdf5'
-        filepath = f'{config.paths[config.task.name].train_data}/{filename}'
-        self._file = h5py.File(filepath, mode='w')
-
+class RotationInfoWriter:
     @staticmethod
     def get_coords_on_original_image(reference_crop_coords, target_crop_coords):
         original_w, original_h = config.image.original_image_shape
@@ -35,14 +30,13 @@ class TrainingDatasetCreator:
 
         return reference_crop_coords, target_crop_coords
 
-    def extract_coords(self, refs_from, tars_from, refs_to, tars_to, indices_to, rotations_to):
+    def extract_coords(self, refs_from, tars_from, rotations_to):
         for (pair_name, ref_dataset), (_, tar_dataset) in zip(refs_from.items(), tars_from.items()):
             if not isinstance(ref_dataset, h5py.Dataset) or not isinstance(tar_dataset, h5py.Dataset):
                 continue
 
             reference_crop_coords = ref_dataset[()]
             target_crop_coords = tar_dataset[()]
-            # assert len(reference_crop_coords) > 0, f'{pair_name} is empty'
             assert len(reference_crop_coords) == len(target_crop_coords)
 
             if len(reference_crop_coords) == 0:
@@ -57,13 +51,6 @@ class TrainingDatasetCreator:
             target_coords_len = len(target_orig_coords)
             assert reference_coords_len > 0
             assert reference_coords_len == target_coords_len
-
-            refs_to.create_dataset(pair_name, data=reference_orig_coords, compression='lzf')
-            tars_to.create_dataset(pair_name, data=target_orig_coords, compression='lzf')
-
-            # random.sample(range(reference_coords_len), reference_coords_len)
-            patch_indices = list(range(reference_coords_len)) 
-            indices_to.create_dataset(pair_name, data=patch_indices, compression='lzf')
 
             # Rotation
 
@@ -81,9 +68,6 @@ class TrainingDatasetCreator:
                     np.array([target_orig_coords[i][0], target_orig_coords[i][1]]),
                 )
 
-                # if a == '8973701570490' and b == '8973934596190' and i == 12:
-                #     print(f'yay {angle}')
-
                 rotations.append(angle)
 
             rotations_to.create_dataset(pair_name, data=rotations, compression='lzf')
@@ -96,33 +80,21 @@ class TrainingDatasetCreator:
 
             filepath = f'{config.paths[config.task.name].output}/data.hdf5'
             filepath = filepath.replace('_test', '')
+            print(filepath)
+
             # noinspection PyAttributeOutsideInit
-            input_file = h5py.File(filepath, mode='r')
+            f = h5py.File(filepath, mode='r+')
 
             for cam in tqdm(config.task.cams, total=2, desc="Extracting Original Coordinates", ncols=100):
                 config.task.cam = cam
                 logger.info(f'Cam : {cam}')
 
-                refs_from = input_file[f'{cam}/matches/crop/reference_coords']
-                tars_from = input_file[f'{cam}/matches/crop/target_coords']
+                refs_from = f[f'{cam}/matches/crop/reference_coords']
+                tars_from = f[f'{cam}/matches/crop/target_coords']
+                rotations_to = f.create_group(f'{cam}/rotationss')
 
-                refs_to = self._file.create_group(f'{track}/{cam}/reference_coords')
-                tars_to = self._file.create_group(f'{track}/{cam}/target_coords')
-                indices_to = self._file.create_group(f'{track}/{cam}/indices')
-                rotations_to = self._file.create_group(f'{track}/{cam}/rotations')
-
-                self.extract_coords(refs_from, tars_from, refs_to, tars_to, indices_to, rotations_to)
+                self.extract_coords(refs_from, tars_from, rotations_to)
         
-            input_file.close()
-
-        def print_hdf5_structure(f):
-            def print_group(name, obj):
-                if isinstance(obj, h5py.Group):
-                    print(f"Group: {name}")
-
-            f.visititems(print_group)
+            f.close()
         
-        print_hdf5_structure(self._file)
-    
-    def close(self):
-        self._file.close()
+        

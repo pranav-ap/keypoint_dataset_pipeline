@@ -10,6 +10,8 @@ import numpy as np
 from .bilinterp import batch_interp, batch_interp_grad
 
 
+import PIL.Image
+# from PIL import Image
 from scipy.optimize import brute
 
 type Vector2 = np.ndarray  # float32, shape=(2,)
@@ -44,7 +46,9 @@ C2: Vector2 = None
 
 
 def R(angle) -> Matrix2x2:
-    angle = angle[0]
+    if hasattr(angle, '__len__') and len(angle) == 1:
+        angle = angle[0]
+
     return array([[cos(angle), -sin(angle)], [sin(angle), cos(angle)]])
 
 
@@ -83,8 +87,12 @@ def solve_patch_rotation(
     # Using globals for speed: avoid self.- dereferencing
     global IMG1, IMG2, C1, C2  # pylint: disable=global-statement
 
-    IMG1 = np.array(img0, dtype=np.uint8)
-    IMG2 = np.array(img1, dtype=np.uint8)
+    IMG1 = np.array(PIL.Image.open(img0), dtype=np.uint8)
+    IMG2 = np.array(PIL.Image.open(img1), dtype=np.uint8)
+
+    # IMG1 = np.array(img0, dtype=np.uint8)
+    # IMG2 = np.array(img1, dtype=np.uint8)
+
     C1 = array(kp0)
     C2 = array(kp1)
     angle = solve()
