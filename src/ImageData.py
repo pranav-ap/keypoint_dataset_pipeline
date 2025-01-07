@@ -124,7 +124,7 @@ class Keypoints:
             w, h = config.image.crop_image_shape
             image = self.crop_from_center(image, w, h)
 
-        # image = image.convert('RGB')
+        image = image.convert('RGB')
 
         return original_image, image
 
