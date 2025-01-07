@@ -85,7 +85,7 @@ class RotationInfoWriter:
             # noinspection PyAttributeOutsideInit
             f = h5py.File(filepath, mode='r+')
 
-            for cam in tqdm(config.task.cams, total=2, desc="Extracting Original Coordinates", ncols=100):
+            for cam in tqdm(config.task.cams, total=2, desc="Extracting Rotation values", ncols=100):
                 config.task.cam = cam
                 logger.info(f'Cam : {cam}')
 
