@@ -87,11 +87,11 @@ def solve_patch_rotation(
     # Using globals for speed: avoid self.- dereferencing
     global IMG1, IMG2, C1, C2  # pylint: disable=global-statement
 
-    IMG1 = np.array(PIL.Image.open(img0), dtype=np.uint8)
-    IMG2 = np.array(PIL.Image.open(img1), dtype=np.uint8)
+    # IMG1 = np.array(PIL.Image.open(img0), dtype=np.uint8)
+    # IMG2 = np.array(PIL.Image.open(img1), dtype=np.uint8)
 
-    # IMG1 = np.array(img0, dtype=np.uint8)
-    # IMG2 = np.array(img1, dtype=np.uint8)
+    IMG1 = img0
+    IMG2 = img1
 
     C1 = array(kp0)
     C2 = array(kp1)
