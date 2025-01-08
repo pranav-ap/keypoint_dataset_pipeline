@@ -104,7 +104,7 @@ class TrainingDatasetCreator:
             # noinspection PyAttributeOutsideInit
             input_file = h5py.File(filepath, mode='r')
 
-            print_hdf5_structure(input_file)
+            # print_hdf5_structure(input_file)
 
             for cam in tqdm(config.task.cams, total=2, desc="Extracting Original Coordinates", ncols=100):
                 config.task.cam = cam
