@@ -251,6 +251,10 @@ class Matches:
         self.pixel_coords = self._warp_to_pixel_coords()
 
     def get_good_matches(self, reference_keypoints: List[cv2.KeyPoint], confidence_threshold=0.6) -> Tuple[List[cv2.KeyPoint], List[cv2.KeyPoint]]:
+        """
+        Just use for testing. Logic incorrect
+        """
+
         target_keypoints = []
         accepted_reference_keypoints = []
 
@@ -288,17 +292,17 @@ class Matches:
 
         print(f'left_padding, top_padding {left_padding, top_padding}')
 
-        reference_crop_coords = [
+        reference_coords = [
             cv2.KeyPoint(kp.pt[0] + left_padding, kp.pt[1] + top_padding, 1.)
             for kp in self.reference_crop_coords
         ]
 
-        target_crop_coords = [
+        target_coords = [
             cv2.KeyPoint(kp.pt[0] + left_padding, kp.pt[1] + top_padding, 1.)
             for kp in self.target_crop_coords
         ]
 
-        return reference_crop_coords, target_crop_coords
+        return reference_coords, target_coords
 
     """
     Load & Save
