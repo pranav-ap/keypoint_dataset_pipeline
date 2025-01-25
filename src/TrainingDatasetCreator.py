@@ -4,7 +4,6 @@ import h5py
 import numpy as np
 from tqdm import tqdm
 
-from .rotate import solve_patch_rotation
 from config import config
 from utils import logger
 
