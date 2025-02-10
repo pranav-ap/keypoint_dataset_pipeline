@@ -92,6 +92,46 @@ class TrainingDatasetCreator:
 
             rotations_to.create_dataset(pair_name, data=rot_values, compression='lzf')
 
+    def extract_coords(self, refs_from, tars_from, refs_to, tars_to, indices_to):
+        for pair_name in refs_from.keys() & tars_from.keys():
+            ref_dataset = refs_from[pair_name]
+            tar_dataset = tars_from[pair_name]
+
+            if not isinstance(ref_dataset, h5py.Dataset) or not isinstance(tar_dataset, h5py.Dataset):
+                continue
+
+            # print(f'{pair_name=}')
+
+            reference_crop_coords = ref_dataset[()]
+            target_crop_coords = tar_dataset[()]
+
+            if len(reference_crop_coords) == 0:
+                continue
+
+            assert len(reference_crop_coords) == len(target_crop_coords), f'Mismatched Shape - {pair_name=} : {reference_crop_coords.shape=} : {rot_values.shape=}'
+
+            # if len(reference_crop_coords) == len(target_crop_coords) == len(rot_values):
+            #     pass
+            # else:
+            #     print(f'Mismatched Shape - {pair_name=} : {reference_crop_coords.shape=} : {rot_values.shape=}')
+               
+            reference_orig_coords, target_orig_coords = self.get_coords_on_original_image(
+                reference_crop_coords,
+                target_crop_coords
+            )
+
+            reference_coords_len = len(reference_orig_coords)
+            target_coords_len = len(target_orig_coords)
+            assert reference_coords_len > 0
+            assert reference_coords_len == target_coords_len
+
+            refs_to.create_dataset(pair_name, data=reference_orig_coords, compression='lzf')
+            tars_to.create_dataset(pair_name, data=target_orig_coords, compression='lzf')
+
+            # random.sample(range(reference_coords_len), reference_coords_len)
+            patch_indices = list(range(reference_coords_len)) 
+            indices_to.create_dataset(pair_name, data=patch_indices, compression='lzf')
+
     def extract(self):
         for track in config.task.tracks:
             config.task.track = track
@@ -106,24 +146,82 @@ class TrainingDatasetCreator:
             # print_hdf5_structure(input_file)
 
             for cam in tqdm(config.task.cams, total=2, desc="Extracting Original Coordinates", ncols=100):
+                if cam == 'cam2' or cam == 'cam3':
+                    if not track.startswith('MG'):
+                        continue
+
                 config.task.cam = cam
                 logger.info(f'Cam : {cam}')
 
                 refs_from = input_file[f'{cam}/matches/crop/reference_coords']
                 tars_from = input_file[f'{cam}/matches/crop/target_coords']
-                rotations_from = input_file[f'{cam}/rotationssss']  # ssss not s
+                # rotations_from = input_file[f'{cam}/rotationssss']  # ssss not s
 
                 refs_to = self._file.create_group(f'{track}/{cam}/reference_coords')
                 tars_to = self._file.create_group(f'{track}/{cam}/target_coords')
                 indices_to = self._file.create_group(f'{track}/{cam}/indices')
-                rotations_to = self._file.create_group(f'{track}/{cam}/rotations') # s not ssss
+                # rotations_to = self._file.create_group(f'{track}/{cam}/rotations') # s not ssss
 
-                self.extract_coords_and_rots(refs_from, tars_from, rotations_from, refs_to, tars_to, indices_to, rotations_to)
+                # self.extract_coords_and_rots(refs_from, tars_from, rotations_from, refs_to, tars_to, indices_to, rotations_to)
+                self.extract_coords(refs_from, tars_from, refs_to, tars_to, indices_to)
+        
+            input_file.close()
+
+        print_hdf5_structure(self._file)
+        print('Done!')
+
+    def extract_warps_only_missing(self, warp_from, cert_from, warp_to, cert_to):
+        for pair_name in warp_from.keys() & cert_from.keys():
+            warp_dataset = warp_from[pair_name]
+            cert_dataset = cert_from[pair_name]
+
+            if not isinstance(warp_dataset, h5py.Dataset) or not isinstance(cert_dataset, h5py.Dataset):
+                continue
+
+            # print(f'{pair_name=}')
+
+            warp = warp_dataset[()]
+            cert = cert_dataset[()]
+
+            # print(f'{warp.shape=}, {cert.shape=}')
+
+            warp_to.create_dataset(pair_name, data=warp, compression='lzf')
+            cert_to.create_dataset(pair_name, data=cert, compression='lzf')
+
+    def extract_only_missing(self):
+        for track in config.task.tracks:
+            config.task.track = track
+            logger.info(f'Track : {track}')
+            config.task.dataset_kind = track[:2]
+
+            filepath = f'{config.paths[config.task.name].output}/data.hdf5'
+            filepath = filepath.replace('_test', '')
+            # noinspection PyAttributeOutsideInit
+            input_file = h5py.File(filepath, mode='r')
+
+            print_hdf5_structure(input_file)
+
+            for cam in tqdm(config.task.cams, total=4, desc="Extracting Warp and Certainty", ncols=100):
+                if cam == 'cam2' or cam == 'cam3':
+                    if not track.startswith('MG'):
+                        continue
+
+                config.task.cam = cam
+                logger.info(f'Cam : {cam}')
+
+                warp_from = input_file[f'{cam}/matcher/warp']
+                cert_from = input_file[f'{cam}/matcher/certainty']
+
+                warp_to = self._file.create_group(f'{track}/{cam}/matcher/warp')
+                cert_to = self._file.create_group(f'{track}/{cam}/matcher/certainty')
+
+                self.extract_warps_only_missing(warp_from, cert_from, warp_to, cert_to)
         
             input_file.close()
 
         print_hdf5_structure(self._file)
         print('Done!')
     
+
     def close(self):
         self._file.close()

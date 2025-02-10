@@ -185,9 +185,11 @@ MATCHES
 
 
 class Matches:
-    def __init__(self, a: Keypoints, b: Keypoints, data_store):
+    def __init__(self, a: Keypoints, b: Keypoints, data_store, kpid=None):
         self.a = a
         self.b = b
+
+        self.kpid = kpid
 
         self.data_store = data_store
 
@@ -311,6 +313,9 @@ class Matches:
     def load(self):
         pair_name = f"{self.a.image_name}_{self.b.image_name}"
 
+        if self.kpid is not None:
+            pair_name = f"{self.a.image_name}_{self.b.image_name}_{self.kpid}"
+
         warp = self.data_store.matcher_warp[pair_name][()]
         warp = torch.from_numpy(warp)
         self.set_warp(warp)
@@ -319,6 +324,9 @@ class Matches:
 
     def save(self):
         pair_name = f"{self.a.image_name}_{self.b.image_name}"
+
+        if self.kpid is not None:
+            pair_name = f"{self.a.image_name}_{self.b.image_name}_{self.kpid}"
 
         assert self.warp is not None
         g = self.data_store.matcher_warp

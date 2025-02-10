@@ -70,8 +70,18 @@ class DataPipeline:
 
         if config.task.limit_count != 0:
             count = config.task.limit_count
-            image_names = image_names[:count]
 
+            # if config.task.only_missing:
+            #     # pick every 3rd
+            #     print(f'From {len(image_names)=}')
+            #     image_names_curr = image_names[:count]
+            #     image_names_next = image_names[1:count+1]
+            #     print(f'To {len(image_names_curr)=}, {len(image_names_next)=} ')
+
+            #     return image_names_curr, image_names_next
+
+            image_names = image_names[:count]
+            
         return image_names
 
     def _process_images(self):
@@ -85,6 +95,14 @@ class DataPipeline:
         self.detector.extract_keypoints(image_names)
         self.matcher.extract_warp_certainty(image_names)
         self.data_filter.extract_good_matches(image_names)
+
+    def _process_images_missing(self):
+        self.data_store.init(for_all_missing=True)
+        
+        image_names = self.get_image_names()
+
+        self.matcher.extract_warp_certainty_missing(image_names)
+        self.data_store.close()
 
     def run(self):
         logger.info('Data Pipeline has started running!')
@@ -112,6 +130,10 @@ class DataPipeline:
 
                 # Process Images
                 for cam in config.task.cams:
+                    if cam == 'cam2' or cam == 'cam3':
+                        if not track.startswith('MG'):
+                            continue
+
                     logger.info(f'Camera {cam}')
                     config.task.cam = cam
                     # torch.cuda.empty_cache()
@@ -153,11 +175,56 @@ class DataPipeline:
 
                     # Process Images
                     for cam in config.task.cams:
+                        if cam == 'cam2' or cam == 'cam3':
+                            if not track.startswith('MG'):
+                                continue
+
                         logger.info(f'Camera {cam}')
                         config.task.cam = cam
                         # torch.cuda.empty_cache()
                         gc.collect()
                         self._process_images()
+
+            finally:
+                self.data_store.close()
+
+        logger.info('Data Pipeline has finished running!')
+
+    def run_missing_list(self):
+        logger.info('Data Pipeline has started running!')
+        torch.cuda.empty_cache()
+
+        for track in config.task.tracks:
+            config.task.track = track
+
+            try:
+                logger.info(f'Running on {track}')
+                config.task.dataset_kind = config.task.track[:2]
+
+                logger.info(f'Clear Directory : {config.paths[config.task.name].output}')
+                make_clear_directory(config.paths[config.task.name].output)
+
+                logger.info('Save Current Config')
+                config_filepath = f'{config.paths[config.task.name].output}/config.yaml'
+                OmegaConf.save(config, config_filepath)
+
+                # Copy IMU Data
+                shutil.copy(
+                    config.paths[config.task.name].imu_csv,
+                    f'{config.paths[config.task.name].output}/imu_data.csv'
+                )
+
+                # Process Images
+                for cam in config.task.cams:
+                    if cam == 'cam2' or cam == 'cam3':
+                        if not track.startswith('MG'):
+                            continue
+
+                    logger.info(f'Camera {cam}')
+                    config.task.cam = cam
+                    # torch.cuda.empty_cache()
+                    gc.collect()
+                    self._process_images_missing()
 
             finally:
                 self.data_store.close()
