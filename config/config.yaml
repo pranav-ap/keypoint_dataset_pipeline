@@ -8,7 +8,7 @@ task:
     
     # basalt related
     
-    limit_count: 3
+    limit_count: 150
 
     dataset: monado_slam  # euroc monado_slam
     dataset_kind: MO
@@ -43,8 +43,8 @@ task:
         
         # - MOO13_sudden_movements # running now 53
 
-        # - MGO07_mapping_easy # running now 57
-        # - MGO08_mapping_hard # running now 57
+        # - MGO07_mapping_easy
+        # - MGO08_mapping_hard
 
         # Normals & Blur
 
@@ -78,18 +78,17 @@ task:
 
         # Only Missing
         
-        - MOO07_mapping_easy  # bad batch - run again 75 
+        - MOO07_mapping_easy   # running on 75 now
         # - MOO08_mapping_hard
         # - MOO09_short_1_updown
-        # - MOO10_short_2_panorama
-        # - MOO11_short_3_backandforth
+        # - MOO10_short_2_panorama 
 
     cam: cam0
     cams:
         - cam0
-        - cam1
-        - cam2
-        - cam3
+        # - cam1
+        # - cam2
+        # - cam3
 
 paths:
     roots:
@@ -121,6 +120,7 @@ image:
     # [width, height]
     original_image_shape: [640, 480]  # [640, 480]
     crop_image_shape: [ 630, 476 ] # [504, 504] [630, 476]
+    patch_size: 82 # 128 82 64
 
 dedode:
     batch_size: 2
@@ -134,6 +134,7 @@ roma:
     filter:
         # keep matches over the absolute confidence threshold
         confidence_threshold: 0.6
+        missed_kp_count: 50
 
 samples:
     samples:

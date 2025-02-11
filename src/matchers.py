@@ -1,5 +1,7 @@
 from abc import ABC
 from typing import Optional
+import numpy as np
+from skimage import feature
 import pandas as pd
 import random
 
@@ -54,6 +56,31 @@ def crop_image_alb(image: Image.Image, keypoint, patch_size=32):
 
 
 
+def edge_skip(crop1, min_edge_density_threshold=0.012):
+    p = crop1.copy().convert("L")
+    # p = p.filter(ImageFilter.MedianFilter(size=3))
+
+    patch_array = np.array(p)
+
+    sigma = 1
+    edges = (
+        feature.canny(
+            patch_array,
+            sigma=sigma,
+        ).astype(np.uint8)
+        * 255
+    )
+
+    # Count non-zero pixels (edges)
+    num_edges = np.count_nonzero(edges)
+    total_pixels = patch_array.shape[0] * patch_array.shape[1]
+    edge_density = round(num_edges / total_pixels, 4)
+
+    must_skip = edge_density < min_edge_density_threshold
+
+    return must_skip
+
+
 class KeypointMatcher(ABC):
     device = get_best_device()
 
@@ -69,7 +96,7 @@ class RoMaMatcher(KeypointMatcher):
         from romatch import roma_outdoor
 
         # self.res = (config.image.crop_image_shape[1], config.image.crop_image_shape[0])
-        self.res = (128, 128)
+        self.res = (config.image.patch_size, config.image.patch_size)
 
         self.model = roma_outdoor(
             device=self.device,
@@ -110,43 +137,48 @@ class RoMaMatcher(KeypointMatcher):
             # Move forward
             a = b
 
-    def extract_warp_certainty_missing(self, image_names):
-        a: Optional[Keypoints] = None
+    def extract_warp_certainty_missing(self, random_pairs):
+        min_edge_density_threshold = 0.02
 
         for name_a, name_b in tqdm(
-            zip(image_names, image_names[1:]),
+            random_pairs,
             desc="Extracting warps", 
             ncols=100,
-            total=len(image_names) - 1,
+            total=len(random_pairs) - 1,
             ):
-            if a is None:
-                a = Keypoints(name_a, self.data_store)
-
+            
+            a = Keypoints(name_a, self.data_store)
             b = Keypoints(name_b, self.data_store)
 
             df = pd.read_csv(
                 f"/home/stud/ath/ath_ws/datasets/track_debug/{config.task.track}/{config.task.cam}/{a.image_name}_incoming_missed_kps.csv",
                 header=0, names=("kpid", "x", "y", "x_guess", "y_guess")
             )
+           
+            # N = config.roma.filter.missed_kp_count
+            # N = min(N, len(df))
+            # shuffled_df = df.sample(n=N)
 
-            shuffled_df = df.sample(frac=1)
-
-            N = 10
-            N = min(N, len(shuffled_df))
-            selected_rows = shuffled_df.head(N)
-
-            for index, row in selected_rows.iterrows():
+            for index, row in df.iterrows():
                 # print(f'kpid={row['kpid']}')
 
                 x, y, x_guess, y_guess = row['x'], row['y'], row['x_guess'], row['y_guess']
                 # print(f'{x, y, x_guess, y_guess=}')
 
                 left_crop, left_crop_keypoint, left, upper = crop_image_alb(
-                    a.original_image, [x, y], patch_size=self.res[0]
+                    a.original_image, [x, y], patch_size=config.image.patch_size,
                 )
 
+                must_skip = edge_skip(
+                    left_crop,
+                    min_edge_density_threshold=min_edge_density_threshold,
+                )
+
+                if must_skip and random.random() > 0.1:
+                    continue
+
                 right_crop, right_crop_keypoint, left, upper = crop_image_alb(
-                    b.original_image, [x_guess, y_guess], patch_size=self.res[0]
+                    b.original_image, [x_guess, y_guess], patch_size=config.image.patch_size,
                 )
 
                 # logger.debug(f'{a.original_image.size=}')
@@ -169,5 +201,3 @@ class RoMaMatcher(KeypointMatcher):
                 pair.certainty = certainty
                 pair.save()
 
-            # Move forward
-            a = b

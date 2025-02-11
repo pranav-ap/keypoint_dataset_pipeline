@@ -6,6 +6,7 @@ import pandas as pd
 import torch
 from omegaconf import OmegaConf
 from pathlib import Path
+import random
 
 from config import config
 from utils import get_best_device, logger, make_clear_directory
@@ -13,6 +14,15 @@ from .DataFilter import DataFilter
 from .DataStore import DataStore
 from .detectors import DeDoDeDetector
 from .matchers import RoMaMatcher
+
+
+def pick_random_consecutive_pairs(lst, N):
+    if len(lst) < 2 or N < 1:
+        return []
+    
+    indices = random.sample(range(len(lst) - 1), N)
+    return [(lst[i], lst[i + 1]) for i in indices]
+
 
 
 class DataPipeline:
@@ -67,21 +77,28 @@ class DataPipeline:
 
         df['filename'] = df['filename'].str.replace(".png", "", regex=False)
         image_names = df['filename'].tolist()
+        logger.debug(f'Before {len(image_names)=}')
+
+        if config.task.only_missing:
+            N = len(image_names)
+            
+            if config.task.limit_count != 0:
+                N = min(N, config.task.limit_count)
+
+            if N == len(image_names):
+                N -= 1
+                
+            logger.debug(f'N {N=}')
+
+            random_pairs = pick_random_consecutive_pairs(image_names, N)
+            logger.info(f'{len(random_pairs)=}')
+            return random_pairs
 
         if config.task.limit_count != 0:
             count = config.task.limit_count
-
-            # if config.task.only_missing:
-            #     # pick every 3rd
-            #     print(f'From {len(image_names)=}')
-            #     image_names_curr = image_names[:count]
-            #     image_names_next = image_names[1:count+1]
-            #     print(f'To {len(image_names_curr)=}, {len(image_names_next)=} ')
-
-            #     return image_names_curr, image_names_next
-
             image_names = image_names[:count]
-            
+            logger.info(f'{len(image_names)=}')
+        
         return image_names
 
     def _process_images(self):
@@ -99,9 +116,9 @@ class DataPipeline:
     def _process_images_missing(self):
         self.data_store.init(for_all_missing=True)
         
-        image_names = self.get_image_names()
+        random_pairs = self.get_image_names()
 
-        self.matcher.extract_warp_certainty_missing(image_names)
+        self.matcher.extract_warp_certainty_missing(random_pairs)
         self.data_store.close()
 
     def run(self):
