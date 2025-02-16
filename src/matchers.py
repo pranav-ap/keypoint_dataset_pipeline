@@ -1,9 +1,11 @@
 from abc import ABC
 from typing import Optional
 import numpy as np
+import torch
 from skimage import feature
 import pandas as pd
 import random
+from collections import defaultdict 
 
 from tqdm import tqdm
 from PIL import Image, ImageOps, ImageDraw, ImageFont
@@ -43,17 +45,14 @@ def get_patch_boundary(image: Image.Image, center_point, patch_size):
     return left, upper, right, lower
 
 
-def crop_image_alb(image: Image.Image, keypoint, patch_size=32):
-    left, upper, right, lower = get_patch_boundary(image, keypoint, patch_size)
-
+def crop_image_alb(image: Image.Image, keypoint, left, upper, right, lower, patch_size=32):
     patch = image.crop((left, upper, right, lower))
     assert patch.size[0] == patch.size[1]
     assert patch.size[0] == patch_size
 
     new_keypoint = keypoint[0] - left, keypoint[1] - upper
 
-    return patch, new_keypoint, left, upper
-
+    return patch, new_keypoint
 
 
 def edge_skip(crop1, min_edge_density_threshold=0.012):
@@ -81,6 +80,21 @@ def edge_skip(crop1, min_edge_density_threshold=0.012):
     return must_skip
 
 
+def moran_skip(crop1, threshold=0.7):
+    crop1_np = np.array(crop1)
+
+    # Convert image to 1D array
+    flattened_patch = crop1_np.ravel()
+
+    # Create a spatial weight matrix
+    w = lat2W(*crop1_np.shape)
+    moran = Moran(flattened_patch, w)
+
+    must_skip = abs(moran.I) < threshold  
+
+    return must_skip
+
+
 class KeypointMatcher(ABC):
     device = get_best_device()
 
@@ -95,8 +109,10 @@ class RoMaMatcher(KeypointMatcher):
         logger.info('Loading RoMaMatcher')
         from romatch import roma_outdoor
 
-        # self.res = (config.image.crop_image_shape[1], config.image.crop_image_shape[0])
-        self.res = (config.image.patch_size, config.image.patch_size)
+        self.res = (config.image.crop_image_shape[1], config.image.crop_image_shape[0])
+
+        if config.task.only_missing:
+            self.res = (config.image.patch_size, config.image.patch_size)
 
         self.model = roma_outdoor(
             device=self.device,
@@ -138,13 +154,14 @@ class RoMaMatcher(KeypointMatcher):
             a = b
 
     def extract_warp_certainty_missing(self, random_pairs):
-        min_edge_density_threshold = 0.02
+        min_edge_density_threshold = 0.05
+        seen_kpids = defaultdict(int)
 
         for name_a, name_b in tqdm(
             random_pairs,
             desc="Extracting warps", 
             ncols=100,
-            total=len(random_pairs) - 1,
+            total=len(random_pairs),
             ):
             
             a = Keypoints(name_a, self.data_store)
@@ -158,45 +175,87 @@ class RoMaMatcher(KeypointMatcher):
             # N = config.roma.filter.missed_kp_count
             # N = min(N, len(df))
             # shuffled_df = df.sample(n=N)
+            
+            desired_patch_size = config.image.patch_size
 
             for index, row in df.iterrows():
-                # print(f'kpid={row['kpid']}')
+                kpid = row['kpid']
+            
+                if seen_kpids[kpid] >= 10:
+                    continue
 
                 x, y, x_guess, y_guess = row['x'], row['y'], row['x_guess'], row['y_guess']
-                # print(f'{x, y, x_guess, y_guess=}')
 
-                left_crop, left_crop_keypoint, left, upper = crop_image_alb(
-                    a.original_image, [x, y], patch_size=config.image.patch_size,
+                # perturb_size = 3
+
+                # perturb_x = np.random.randint(1, perturb_size) * np.random.choice([1, -1])
+                # perturb_y = np.random.randint(1, perturb_size) * np.random.choice([1, -1])
+
+                ref_center = [x, y]
+                
+                # if 0 <= x + perturb_x < config.image.original_image_shape[0]:
+                #     ref_center[0] = x + perturb_x
+
+                # if 0 <= y + perturb_y < config.image.original_image_shape[1]:
+                #     ref_center[1] = y + perturb_y 
+
+                # left, upper, right, lower are always within given image dimensions
+                ref_left, ref_upper, ref_right, ref_lower = get_patch_boundary(a.original_image, ref_center, patch_size=desired_patch_size)
+
+                ref_keypoint = [x, y]
+                ref_crop, ref_crop_keypoint = crop_image_alb(
+                    a.original_image, ref_keypoint, ref_left, ref_upper, ref_right, ref_lower, patch_size=desired_patch_size,
                 )
 
                 must_skip = edge_skip(
-                    left_crop,
+                    ref_crop,
                     min_edge_density_threshold=min_edge_density_threshold,
                 )
 
-                if must_skip and random.random() > 0.1:
+                if must_skip: # and random.random() > 0.1:
                     continue
 
-                right_crop, right_crop_keypoint, left, upper = crop_image_alb(
-                    b.original_image, [x_guess, y_guess], patch_size=config.image.patch_size,
+                seen_kpids[kpid] += 1
+
+                # perturb_x = np.random.randint(1, perturb_size) * np.random.choice([1, -1])
+                # perturb_y = np.random.randint(1, perturb_size) * np.random.choice([1, -1])
+
+                tar_center = [x_guess, y_guess]
+
+                # if 0 <= x_guess + perturb_x < config.image.original_image_shape[0]:
+                #     tar_center[0] = x_guess + perturb_x 
+
+                # if 0 <= y_guess + perturb_y < config.image.original_image_shape[1]:
+                #     tar_center[1] = y_guess + perturb_y
+                
+                tar_left, tar_upper, tar_right, tar_lower = get_patch_boundary(b.original_image, tar_center, patch_size=desired_patch_size)
+
+                tar_keypoint = [x_guess, y_guess]
+                tar_crop, tar_crop_keypoint = crop_image_alb(
+                    b.original_image, tar_keypoint, tar_left, tar_upper, tar_right, tar_lower, patch_size=desired_patch_size,
                 )
 
                 # logger.debug(f'{a.original_image.size=}')
-                # logger.debug(f'{left_crop.size=}')
-
-                assert a.original_image.size == b.original_image.size, 'images must have same size'
-                assert left_crop.size == right_crop.size, 'crops must have same size'
+                # logger.debug(f'{ref_crop.size=}')
 
                 # Match using model and retrieve warp and certainty
-                # print('run roma')
                 warp, certainty = self.model.match(
-                    left_crop.convert('RGB'), right_crop.convert('RGB'),
+                    ref_crop.convert('RGB'), tar_crop.convert('RGB'),
                     device=self.device
                 )
-                # print('roma done')
+                
+                # warp = torch.ones((config.image.patch_size, config.image.patch_size, 4))
+                # certainty = torch.ones((config.image.patch_size, config.image.patch_size))
+
+                saves = [
+                    ref_crop_keypoint[0], ref_crop_keypoint[1],
+                    ref_left, ref_upper, ref_right, ref_lower,
+
+                    tar_left, tar_upper, tar_right, tar_lower,
+                ]
 
                 # Set warp and certainty for the match pair
-                pair = Matches(a, b, self.data_store, kpid=row['kpid'])
+                pair = Matches(a, b, self.data_store, kpid=kpid, saves=saves)
                 pair.set_warp(warp)
                 pair.certainty = certainty
                 pair.save()

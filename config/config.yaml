@@ -8,10 +8,10 @@ task:
     
     # basalt related
     
-    limit_count: 150
+    limit_count: 400
 
     dataset: monado_slam  # euroc monado_slam
-    dataset_kind: MO
+    dataset_kind: MG
     
     # all normal blur all_missing
     frame_filtering: all_missing
@@ -35,16 +35,19 @@ task:
         # - MOO04_hand_shooter_hard
         # - MOO05_inspect_easy
         # - MOO06_inspect_hard
-        # - MOO07_mapping_easy
+        # - MOO07_mapping_easy # running on 75 now
         # - MOO08_mapping_hard
         # - MOO09_short_1_updown
         # - MOO10_short_2_panorama
         # - MOO11_short_3_backandforth
-        
-        # - MOO13_sudden_movements # running now 53
+        # - MOO13_sudden_movements 
 
+       
+        # - MGO04_hand_shooter_hard # running on 75 now
+        # - MGO06_inspect_hard # running on 75 now
         # - MGO07_mapping_easy
         # - MGO08_mapping_hard
+        # - MGO09_short_1_updown # running on 75 now
 
         # Normals & Blur
 
@@ -78,15 +81,15 @@ task:
 
         # Only Missing
         
-        - MOO07_mapping_easy   # running on 75 now
-        # - MOO08_mapping_hard
-        # - MOO09_short_1_updown
-        # - MOO10_short_2_panorama 
+        - MOO07_mapping_easy 
+        - MOO08_mapping_hard 
+        - MOO09_short_1_updown 
+        - MOO10_short_2_panorama 
 
     cam: cam0
     cams:
         - cam0
-        # - cam1
+        - cam1
         # - cam2
         # - cam3
 

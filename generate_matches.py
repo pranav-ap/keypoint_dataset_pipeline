@@ -3,6 +3,7 @@ from config import config
 
 
 def main():
+    print(config)
     pipeline = DataPipeline()
 
     if config.task.only_missing:

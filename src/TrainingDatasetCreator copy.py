@@ -170,26 +170,23 @@ class TrainingDatasetCreator:
         print_hdf5_structure(self._file)
         print('Done!')
 
-    def extract_warps_only_missing(self, warp_from, cert_from, saves_from, warp_to, cert_to, saves_to):
-        for pair_name in warp_from.keys() & cert_from.keys() & saves_from.keys():
+    def extract_warps_only_missing(self, warp_from, cert_from, warp_to, cert_to):
+        for pair_name in warp_from.keys() & cert_from.keys():
             warp_dataset = warp_from[pair_name]
             cert_dataset = cert_from[pair_name]
-            saves_dataset = saves_from[pair_name]
 
-            if not isinstance(warp_dataset, h5py.Dataset) or not isinstance(cert_dataset, h5py.Dataset) or not isinstance(saves_dataset, h5py.Dataset):
+            if not isinstance(warp_dataset, h5py.Dataset) or not isinstance(cert_dataset, h5py.Dataset):
                 continue
 
             # print(f'{pair_name=}')
 
             warp = warp_dataset[()]
             cert = cert_dataset[()]
-            saves = saves_dataset[()]
 
             # print(f'{warp.shape=}, {cert.shape=}')
 
             warp_to.create_dataset(pair_name, data=warp, compression='lzf')
             cert_to.create_dataset(pair_name, data=cert, compression='lzf')
-            saves_to.create_dataset(pair_name, data=saves, compression='lzf')
 
     def extract_only_missing(self):
         for track in config.task.tracks:
@@ -198,7 +195,7 @@ class TrainingDatasetCreator:
             config.task.dataset_kind = track[:2]
 
             filepath = f'{config.paths[config.task.name].output}/data.hdf5'
-            # filepath = filepath.replace('_test', '')
+            filepath = filepath.replace('_test', '')
             # noinspection PyAttributeOutsideInit
             input_file = h5py.File(filepath, mode='r')
 
@@ -214,18 +211,17 @@ class TrainingDatasetCreator:
 
                 warp_from = input_file[f'{cam}/matcher/warp']
                 cert_from = input_file[f'{cam}/matcher/certainty']
-                saves_from = input_file[f'{cam}/matcher/saves']
 
                 warp_to = self._file.create_group(f'{track}/{cam}/matcher/warp')
                 cert_to = self._file.create_group(f'{track}/{cam}/matcher/certainty')
-                saves_to = self._file.create_group(f'{track}/{cam}/matcher/saves')
 
-                self.extract_warps_only_missing(warp_from, cert_from, saves_from, warp_to, cert_to, saves_to)
+                self.extract_warps_only_missing(warp_from, cert_from, warp_to, cert_to)
         
             input_file.close()
 
         print_hdf5_structure(self._file)
         print('Done!')
+    
 
     def close(self):
         self._file.close()

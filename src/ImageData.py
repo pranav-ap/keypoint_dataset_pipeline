@@ -185,11 +185,12 @@ MATCHES
 
 
 class Matches:
-    def __init__(self, a: Keypoints, b: Keypoints, data_store, kpid=None):
+    def __init__(self, a: Keypoints, b: Keypoints, data_store, kpid=None, saves=None):
         self.a = a
         self.b = b
 
         self.kpid = kpid
+        self.saves=saves
 
         self.data_store = data_store
 
@@ -250,7 +251,9 @@ class Matches:
 
     def set_warp(self, warp):
         self.warp = warp
-        self.pixel_coords = self._warp_to_pixel_coords()
+        
+        if not config.task.only_missing:
+            self.pixel_coords = self._warp_to_pixel_coords()
 
     def get_good_matches(self, reference_keypoints: List[cv2.KeyPoint], confidence_threshold=0.6) -> Tuple[List[cv2.KeyPoint], List[cv2.KeyPoint]]:
         """
@@ -315,6 +318,7 @@ class Matches:
 
         if self.kpid is not None:
             pair_name = f"{self.a.image_name}_{self.b.image_name}_{self.kpid}"
+            self.saves = self.data_store.matcher_saves[pair_name][()]
 
         warp = self.data_store.matcher_warp[pair_name][()]
         warp = torch.from_numpy(warp)
@@ -327,6 +331,12 @@ class Matches:
 
         if self.kpid is not None:
             pair_name = f"{self.a.image_name}_{self.b.image_name}_{self.kpid}"
+
+            assert self.saves is not None
+            g = self.data_store.matcher_saves
+            if pair_name not in g:
+                data = self.saves
+                g.create_dataset(pair_name, data=data, compression='gzip', compression_opts=9)
 
         assert self.warp is not None
         g = self.data_store.matcher_warp
