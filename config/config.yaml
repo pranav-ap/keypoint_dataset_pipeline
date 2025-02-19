@@ -8,7 +8,7 @@ task:
     
     # basalt related
     
-    limit_count: 400
+    limit_count: 0
 
     dataset: monado_slam  # euroc monado_slam
     dataset_kind: MG
@@ -27,41 +27,22 @@ task:
 
     track: MOO09_short_1_updown
     tracks:
-        # All
-
         # - MOO01_hand_puncher_1
-        # - MOO02_hand_puncher_2
-        # - MOO03_hand_shooter_easy
-        # - MOO04_hand_shooter_hard
-        # - MOO05_inspect_easy
-        # - MOO06_inspect_hard
-        # - MOO07_mapping_easy # running on 75 now
-        # - MOO08_mapping_hard
-        # - MOO09_short_1_updown
-        # - MOO10_short_2_panorama
-        # - MOO11_short_3_backandforth
-        # - MOO13_sudden_movements 
 
-       
-        # - MGO04_hand_shooter_hard # running on 75 now
-        # - MGO06_inspect_hard # running on 75 now
-        # - MGO07_mapping_easy
-        # - MGO08_mapping_hard
-        # - MGO09_short_1_updown # running on 75 now
+        # 50
+        - MOO02_hand_puncher_2
+        - MOO03_hand_shooter_easy
+        - MOO04_hand_shooter_hard
+        - MOO05_inspect_easy
+        - MOO06_inspect_hard
 
-        # Normals & Blur
-
-        # - MOO01_hand_puncher_1
-        # - MOO02_hand_puncher_2
-        # - MOO03_hand_shooter_easy
-        # - MOO04_hand_shooter_hard
-        # - MOO05_inspect_easy
-        # - MOO06_inspect_hard
+        # 53 
         # - MOO07_mapping_easy
         # - MOO08_mapping_hard
         # - MOO09_short_1_updown
         # - MOO10_short_2_panorama
         # - MOO11_short_3_backandforth
+
         # - MOO13_sudden_movements
         # - MOO14_flickering_light
 
@@ -78,13 +59,6 @@ task:
         # - MGO11_short_3_backandforth
         # - MGO13_sudden_movements
         # - MGO14_flickering_light
-
-        # Only Missing
-        
-        - MOO07_mapping_easy 
-        - MOO08_mapping_hard 
-        - MOO09_short_1_updown 
-        - MOO10_short_2_panorama 
 
     cam: cam0
     cams:

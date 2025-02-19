@@ -82,14 +82,23 @@ class DataPipeline:
         if config.task.only_missing:
             N = len(image_names)
             
+            if N < 500:
+                N = 150
+            elif N < 1000:
+                N = 300
+            elif N < 3000:
+                N = 400
+            else:
+                N = 600
+            
+            N = min(N, len(image_names))
+            
             if config.task.limit_count != 0:
                 N = min(N, config.task.limit_count)
 
             if N == len(image_names):
                 N -= 1
                 
-            logger.debug(f'N {N=}')
-
             random_pairs = pick_random_consecutive_pairs(image_names, N)
             logger.info(f'{len(random_pairs)=}')
             return random_pairs

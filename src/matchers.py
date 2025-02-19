@@ -154,7 +154,7 @@ class RoMaMatcher(KeypointMatcher):
             a = b
 
     def extract_warp_certainty_missing(self, random_pairs):
-        min_edge_density_threshold = 0.05
+        min_edge_density_threshold = 0.04
         seen_kpids = defaultdict(int)
 
         for name_a, name_b in tqdm(
@@ -181,23 +181,23 @@ class RoMaMatcher(KeypointMatcher):
             for index, row in df.iterrows():
                 kpid = row['kpid']
             
-                if seen_kpids[kpid] >= 10:
+                if seen_kpids[kpid] >= 30:
                     continue
 
                 x, y, x_guess, y_guess = row['x'], row['y'], row['x_guess'], row['y_guess']
 
-                # perturb_size = 3
+                perturb_size = 2
 
-                # perturb_x = np.random.randint(1, perturb_size) * np.random.choice([1, -1])
-                # perturb_y = np.random.randint(1, perturb_size) * np.random.choice([1, -1])
+                perturb_x = np.random.randint(1, perturb_size) * np.random.choice([1, -1])
+                perturb_y = np.random.randint(1, perturb_size) * np.random.choice([1, -1])
 
                 ref_center = [x, y]
                 
-                # if 0 <= x + perturb_x < config.image.original_image_shape[0]:
-                #     ref_center[0] = x + perturb_x
+                if 0 <= x + perturb_x < config.image.original_image_shape[0]:
+                    ref_center[0] = x + perturb_x
 
-                # if 0 <= y + perturb_y < config.image.original_image_shape[1]:
-                #     ref_center[1] = y + perturb_y 
+                if 0 <= y + perturb_y < config.image.original_image_shape[1]:
+                    ref_center[1] = y + perturb_y 
 
                 # left, upper, right, lower are always within given image dimensions
                 ref_left, ref_upper, ref_right, ref_lower = get_patch_boundary(a.original_image, ref_center, patch_size=desired_patch_size)
@@ -217,16 +217,16 @@ class RoMaMatcher(KeypointMatcher):
 
                 seen_kpids[kpid] += 1
 
-                # perturb_x = np.random.randint(1, perturb_size) * np.random.choice([1, -1])
-                # perturb_y = np.random.randint(1, perturb_size) * np.random.choice([1, -1])
+                perturb_x = np.random.randint(1, perturb_size) * np.random.choice([1, -1])
+                perturb_y = np.random.randint(1, perturb_size) * np.random.choice([1, -1])
 
                 tar_center = [x_guess, y_guess]
 
-                # if 0 <= x_guess + perturb_x < config.image.original_image_shape[0]:
-                #     tar_center[0] = x_guess + perturb_x 
+                if 0 <= x_guess + perturb_x < config.image.original_image_shape[0]:
+                    tar_center[0] = x_guess + perturb_x 
 
-                # if 0 <= y_guess + perturb_y < config.image.original_image_shape[1]:
-                #     tar_center[1] = y_guess + perturb_y
+                if 0 <= y_guess + perturb_y < config.image.original_image_shape[1]:
+                    tar_center[1] = y_guess + perturb_y
                 
                 tar_left, tar_upper, tar_right, tar_lower = get_patch_boundary(b.original_image, tar_center, patch_size=desired_patch_size)
 
