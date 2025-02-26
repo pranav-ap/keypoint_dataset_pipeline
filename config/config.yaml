@@ -27,16 +27,18 @@ task:
 
     track: MOO09_short_1_updown
     tracks:
-        # - MOO01_hand_puncher_1
+        # - MOO01_hand_puncher_1 # done
 
-        # 50
-        - MOO02_hand_puncher_2
-        - MOO03_hand_shooter_easy
-        - MOO04_hand_shooter_hard
-        - MOO05_inspect_easy
-        - MOO06_inspect_hard
+        # all_missing running now on 50 half 1 
+        # - MOO02_hand_puncher_2 # done
+        - MOO03_hand_shooter_easy # done
 
-        # 53 
+        # all_missing running now on 75 half 2 - done
+        # - MOO04_hand_shooter_hard
+        # - MOO05_inspect_easy
+        # - MOO06_inspect_hard
+
+        # all_missing running now on 57 half 3 - done 
         # - MOO07_mapping_easy
         # - MOO08_mapping_hard
         # - MOO09_short_1_updown

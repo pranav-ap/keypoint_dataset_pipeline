@@ -80,16 +80,21 @@ class DataPipeline:
         logger.debug(f'Before {len(image_names)=}')
 
         if config.task.only_missing:
-            N = len(image_names)
-            
-            if N < 500:
-                N = 150
-            elif N < 1000:
-                N = 300
-            elif N < 3000:
-                N = 400
-            else:
-                N = 600
+            N = len(image_names) 
+
+            N = round(N * 0.65)
+            N = min(N, 2700)
+
+            # N = 10
+
+            # if N < 500:
+            #     N = 150
+            # elif N < 5000:
+            #     N = 1200
+            # elif N < 6000:
+            #     N = 2000
+            # else:
+            #     N = 600
             
             N = min(N, len(image_names))
             
