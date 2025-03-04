@@ -1,7 +1,5 @@
 import random
-
 import h5py
-
 from config import config
 
 
@@ -14,6 +12,15 @@ class DataStore:
         filename = 'data.hdf5'
         filepath = f'{config.paths[config.task.name].output}/{filename}'
         # filepath = filepath.replace('_test', '')
+
+        # try:
+        #     with h5py.File(filepath, self.mode) as f:
+        #         self._file = f 
+        #         print(f.keys()) 
+        # except Exception as e:
+        #     print("Error opening HDF5 file:", e)
+        #     exit(1)
+
         # noinspection PyAttributeOutsideInit
         self._file = h5py.File(filepath, self.mode)
 

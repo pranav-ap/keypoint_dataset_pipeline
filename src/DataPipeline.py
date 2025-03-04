@@ -82,10 +82,10 @@ class DataPipeline:
         if config.task.only_missing:
             N = len(image_names) 
 
-            N = round(N * 0.65)
-            N = min(N, 2700)
-
-            # N = 10
+            N = round(N * 0.8)
+            # logger.info(f'{N=}')
+            # N = 2
+            # N = min(N, 200)
 
             # if N < 500:
             #     N = 150
@@ -256,8 +256,11 @@ class DataPipeline:
                     # torch.cuda.empty_cache()
                     gc.collect()
                     self._process_images_missing()
+                    gc.collect()
 
             finally:
+                gc.collect()
                 self.data_store.close()
+                gc.collect()
 
         logger.info('Data Pipeline has finished running!')

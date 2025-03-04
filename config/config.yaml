@@ -13,8 +13,8 @@ task:
     dataset: monado_slam  # euroc monado_slam
     dataset_kind: MG
     
-    # all normal blur all_missing
-    frame_filtering: all_missing
+    # all normal blur all_missing  all_missing_more 
+    frame_filtering: all_missing_more
 
     blur_threshold: 50
     displacement_threshold: 20  # 20 cm 
@@ -26,25 +26,24 @@ task:
     output_folder_name: output_${task.frame_filtering}
 
     track: MOO09_short_1_updown
-    tracks:
-        # - MOO01_hand_puncher_1 # done
-
-        # all_missing running now on 50 half 1 
-        # - MOO02_hand_puncher_2 # done
-        - MOO03_hand_shooter_easy # done
-
-        # all_missing running now on 75 half 2 - done
+    tracks: [] 
+        # gen 2 - 50 more 
+        # - MOO01_hand_puncher_1 
+        # - MOO02_hand_puncher_2 
+        # - MOO03_hand_shooter_easy 
+        
+        # gen 1 - 75 more 
         # - MOO04_hand_shooter_hard
         # - MOO05_inspect_easy
         # - MOO06_inspect_hard
 
-        # all_missing running now on 57 half 3 - done 
+        # gen 3 - 57 more 
         # - MOO07_mapping_easy
         # - MOO08_mapping_hard
         # - MOO09_short_1_updown
         # - MOO10_short_2_panorama
-        # - MOO11_short_3_backandforth
 
+        # - MOO11_short_3_backandforth
         # - MOO13_sudden_movements
         # - MOO14_flickering_light
 

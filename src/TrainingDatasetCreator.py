@@ -3,6 +3,7 @@ import random
 import h5py
 import numpy as np
 from tqdm import tqdm
+import gc
 
 from config import config
 from utils import logger
@@ -182,16 +183,26 @@ class TrainingDatasetCreator:
             # print(f'{pair_name=}')
 
             warp = warp_dataset[()]
-            cert = cert_dataset[()]
-            saves = saves_dataset[()]
+                
+            # gc.collect()
 
-            # print(f'{warp.shape=}, {cert.shape=}')
+            try:
+                cert = cert_dataset[()]
+            except Exception as e:
+                logger.debug('oops')
+                continue
+
+            # gc.collect()
+
+            saves = saves_dataset[()]
 
             warp_to.create_dataset(pair_name, data=warp, compression='lzf')
             cert_to.create_dataset(pair_name, data=cert, compression='lzf')
             saves_to.create_dataset(pair_name, data=saves, compression='lzf')
 
     def extract_only_missing(self):
+        gc.collect()
+        
         for track in config.task.tracks:
             config.task.track = track
             logger.info(f'Track : {track}')
@@ -202,12 +213,16 @@ class TrainingDatasetCreator:
             # noinspection PyAttributeOutsideInit
             input_file = h5py.File(filepath, mode='r')
 
-            print_hdf5_structure(input_file)
+            # print_hdf5_structure(input_file)
 
-            for cam in tqdm(config.task.cams, total=4, desc="Extracting Warp and Certainty", ncols=100):
+            total = 2 if not track.startswith('MG') else 4 
+
+            for cam in tqdm(config.task.cams, total=total, desc="Transferring to train_data file", ncols=100):
                 if cam == 'cam2' or cam == 'cam3':
                     if not track.startswith('MG'):
                         continue
+                
+                # gc.collect()
 
                 config.task.cam = cam
                 logger.info(f'Cam : {cam}')
@@ -220,9 +235,14 @@ class TrainingDatasetCreator:
                 cert_to = self._file.create_group(f'{track}/{cam}/matcher/certainty')
                 saves_to = self._file.create_group(f'{track}/{cam}/matcher/saves')
 
+                # gc.collect()
                 self.extract_warps_only_missing(warp_from, cert_from, saves_from, warp_to, cert_to, saves_to)
+                # gc.collect()
         
+        
+            # gc.collect()
             input_file.close()
+            # gc.collect()
 
         print_hdf5_structure(self._file)
         print('Done!')
