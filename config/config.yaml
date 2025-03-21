@@ -26,22 +26,18 @@ task:
     output_folder_name: output_${task.frame_filtering}
 
     track: MOO09_short_1_updown
-    tracks: [] 
-        # gen 2 - 50 more 
-        # - MOO01_hand_puncher_1 
-        # - MOO02_hand_puncher_2 
-        # - MOO03_hand_shooter_easy 
-        
-        # gen 1 - 75 more 
-        # - MOO04_hand_shooter_hard
-        # - MOO05_inspect_easy
-        # - MOO06_inspect_hard
+    tracks: # [] 
 
-        # gen 3 - 57 more 
-        # - MOO07_mapping_easy
-        # - MOO08_mapping_hard
-        # - MOO09_short_1_updown
-        # - MOO10_short_2_panorama
+        - MOO01_hand_puncher_1         
+        - MOO02_hand_puncher_2 
+        - MOO03_hand_shooter_easy 
+        - MOO04_hand_shooter_hard
+        - MOO05_inspect_easy
+        - MOO06_inspect_hard
+        - MOO07_mapping_easy
+        - MOO08_mapping_hard
+        - MOO09_short_1_updown
+        - MOO10_short_2_panorama
 
         # - MOO11_short_3_backandforth
         # - MOO13_sudden_movements
