@@ -4,42 +4,46 @@ components:
 
 task:
     name: basalt  # samples basalt
-    consider_samples: False # True False
+    
+    # use if you want to run the pipeline to run on pics 
+    # given in samples field at end of document here
+    consider_samples: False # True False  
     
     # basalt related
     
-    limit_count: 0
+    # use number > 0 if you want to run pipeline on few frames from a cam 
+    limit_count: 0  
 
     dataset: monado_slam  # euroc monado_slam
-    dataset_kind: MG
+    dataset_kind: MG 
     
-    # all normal blur all_missing  all_missing_more 
-    frame_filtering: all_missing_more
+    # all normal blur  
+    frame_filtering: all
 
     blur_threshold: 50
     displacement_threshold: 20  # 20 cm 
     angle_threshold: 20  # 20 degrees
     
     extract_from_all_tracks: True  # True False
-    only_missing: True
+    only_missing: False
 
     output_folder_name: output_${task.frame_filtering}
 
     track: MOO09_short_1_updown
     tracks: # [] 
 
-        - MOO01_hand_puncher_1         
-        - MOO02_hand_puncher_2 
-        - MOO03_hand_shooter_easy 
-        - MOO04_hand_shooter_hard
-        - MOO05_inspect_easy
-        - MOO06_inspect_hard
-        - MOO07_mapping_easy
-        - MOO08_mapping_hard
-        - MOO09_short_1_updown
-        - MOO10_short_2_panorama
-
+        # - MOO01_hand_puncher_1         
+        # - MOO02_hand_puncher_2 
+        # - MOO03_hand_shooter_easy 
+        # - MOO04_hand_shooter_hard
+        # - MOO05_inspect_easy
+        # - MOO06_inspect_hard
+        # - MOO07_mapping_easy
+        # - MOO08_mapping_hard
+        # - MOO09_short_1_updown
+        # - MOO10_short_2_panorama
         # - MOO11_short_3_backandforth
+        # - MOO12_freemovement_long_session
         # - MOO13_sudden_movements
         # - MOO14_flickering_light
 
@@ -54,15 +58,14 @@ task:
         # - MGO09_short_1_updown
         # - MGO10_short_2_panorama
         # - MGO11_short_3_backandforth
-        # - MGO13_sudden_movements
-        # - MGO14_flickering_light
+        - MGO12_freemovement_long_session
 
     cam: cam0
     cams:
         - cam0
         - cam1
-        # - cam2
-        # - cam3
+        - cam2
+        - cam3
 
 paths:
     roots:
