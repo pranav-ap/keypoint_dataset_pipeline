@@ -3,7 +3,7 @@ output/
 output*/
 tensors/
 zips/
-*data.hdf5
+*.hdf5
 *.out
 ./INSTRUCTIONS.md
 .idea/
