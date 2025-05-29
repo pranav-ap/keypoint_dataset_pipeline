@@ -1,10 +1,13 @@
 libs/
 output/
+output*/
 tensors/
 zips/
 *.hdf5
 *.out
 ./INSTRUCTIONS.md
+.idea/
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

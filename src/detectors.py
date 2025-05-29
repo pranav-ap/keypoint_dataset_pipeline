@@ -70,8 +70,12 @@ class DeDoDeDetector(KeypointDetector):
         chunk_size = config.dedode.batch_size
         total_chunks = (len(image_names) + chunk_size - 1) // chunk_size
 
-        for image_names_chunk in tqdm(chunk_iterable(image_names, chunk_size), total=total_chunks,
-                                      desc="Extracting keypoints", ncols=100):
+        for image_names_chunk in tqdm(
+                chunk_iterable(image_names, chunk_size), 
+                total=total_chunks,
+                desc="Extracting keypoints", 
+                ncols=100,
+            ):
             kds = [Keypoints(name, self.data_store, is_filtered=False) for name in image_names_chunk]
             self._images_detect(kds)
 

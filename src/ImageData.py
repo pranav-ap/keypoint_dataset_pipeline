@@ -52,9 +52,9 @@ class ImageKeypoints(_Keypoints):
 
         coords = [
             cv2.KeyPoint(
-                int((x.item() + 1) * (w / 2)),
-                int((y.item() + 1) * (h / 2)),
-                1
+                (x.item() + 1) * (w / 2),
+                (y.item() + 1) * (h / 2),
+                1.
             )
             for x, y in self.normalised
         ]
@@ -116,7 +116,7 @@ class Keypoints:
         return cropped_image
 
     def _init_image(self) -> Tuple[Image.Image, Image.Image]:
-        assert os.path.exists(self.image_path)
+        assert os.path.exists(self.image_path), self.image_path
         image = Image.open(self.image_path)
         original_image = image.copy()
 
@@ -185,9 +185,12 @@ MATCHES
 
 
 class Matches:
-    def __init__(self, a: Keypoints, b: Keypoints, data_store):
+    def __init__(self, a: Keypoints, b: Keypoints, data_store, kpid=None, saves=None):
         self.a = a
         self.b = b
+
+        self.kpid = kpid
+        self.saves=saves
 
         self.data_store = data_store
 
@@ -197,6 +200,8 @@ class Matches:
 
         self.reference_crop_coords: Optional[List[cv2.KeyPoint]] = None
         self.target_crop_coords: Optional[List[cv2.KeyPoint]] = None
+
+        self.rotations = None
 
     @staticmethod
     def load_from_names(name_a, name_b, data_store, load_coords=False, must_crop=True):
@@ -246,25 +251,37 @@ class Matches:
 
     def set_warp(self, warp):
         self.warp = warp
-        self.pixel_coords = self._warp_to_pixel_coords()
+        
+        if not config.task.only_missing:
+            self.pixel_coords = self._warp_to_pixel_coords()
 
     def get_good_matches(self, reference_keypoints: List[cv2.KeyPoint], confidence_threshold=0.6) -> Tuple[List[cv2.KeyPoint], List[cv2.KeyPoint]]:
+        """
+        Just use for testing. Logic incorrect
+        """
+
         target_keypoints = []
         accepted_reference_keypoints = []
 
         for pt in reference_keypoints:
-            x_a, y_a = pt.pt
-            x_a, y_a = int(x_a), int(y_a)
+            query_x, query_y = pt.pt
+            rounded_query_y, rounded_query_x = round(query_y), round(query_x)
 
-            conf = self.certainty[y_a, x_a]
+            conf = self.certainty[rounded_query_y, rounded_query_x]
             if conf <= confidence_threshold:
                 continue
 
-            _, _, x_b, y_b = self.pixel_coords[y_a, x_a]
-            x_b, y_b = int(x_b.item()), int(y_b.item())
+            closest_ref_x, closest_ref_y, closest_tar_x, closest_tar_y = self.pixel_coords[rounded_query_y, rounded_query_x]
+            closest_ref_x, closest_ref_y, closest_tar_x, closest_tar_y = closest_ref_x.item(), closest_ref_y.item(), closest_tar_x.item(), closest_tar_y.item()
+
+            ref_y_diff = query_y - closest_ref_y
+            ref_x_diff = query_x - closest_ref_x
+
+            answer_y = closest_tar_y + ref_y_diff
+            answer_x = closest_tar_x + ref_x_diff
 
             accepted_reference_keypoints.append(pt)
-            target_keypoints.append(cv2.KeyPoint(x_b, y_b, 1.))
+            target_keypoints.append(cv2.KeyPoint(answer_x, answer_y, 1.))
 
         return accepted_reference_keypoints, target_keypoints
 
@@ -272,20 +289,25 @@ class Matches:
         original_w, original_h = config.image.original_image_shape
         crop_w, crop_h = config.image.crop_image_shape
 
-        left_padding = (original_w - crop_w) // 2
-        top_padding = (original_h - crop_h) // 2
+        print(f'original_w, original_h {original_w, original_h}')
+        print(f'crop_w, crop_h {crop_w, crop_h}')
 
-        reference_crop_coords = [
+        left_padding = (original_w - crop_w) / 2
+        top_padding = (original_h - crop_h) / 2
+
+        print(f'left_padding, top_padding {left_padding, top_padding}')
+
+        reference_coords = [
             cv2.KeyPoint(kp.pt[0] + left_padding, kp.pt[1] + top_padding, 1.)
             for kp in self.reference_crop_coords
         ]
 
-        target_crop_coords = [
+        target_coords = [
             cv2.KeyPoint(kp.pt[0] + left_padding, kp.pt[1] + top_padding, 1.)
             for kp in self.target_crop_coords
         ]
 
-        return reference_crop_coords, target_crop_coords
+        return reference_coords, target_coords
 
     """
     Load & Save
@@ -293,6 +315,10 @@ class Matches:
 
     def load(self):
         pair_name = f"{self.a.image_name}_{self.b.image_name}"
+
+        if self.kpid is not None:
+            pair_name = f"{self.a.image_name}_{self.b.image_name}_{self.kpid}"
+            self.saves = self.data_store.matcher_saves[pair_name][()]
 
         warp = self.data_store.matcher_warp[pair_name][()]
         warp = torch.from_numpy(warp)
@@ -302,6 +328,15 @@ class Matches:
 
     def save(self):
         pair_name = f"{self.a.image_name}_{self.b.image_name}"
+
+        if self.kpid is not None:
+            pair_name = f"{self.a.image_name}_{self.b.image_name}_{self.kpid}"
+
+            assert self.saves is not None
+            g = self.data_store.matcher_saves
+            if pair_name not in g:
+                data = self.saves
+                g.create_dataset(pair_name, data=data, compression='gzip', compression_opts=9)
 
         assert self.warp is not None
         g = self.data_store.matcher_warp
@@ -320,13 +355,13 @@ class Matches:
 
         reference_crop_coords = self.data_store.crop_reference_coords[pair_name][()]
         self.reference_crop_coords = [
-            cv2.KeyPoint(int(x), int(y), 1.)
+            cv2.KeyPoint(x, y, 1.)
             for x, y in reference_crop_coords
         ]
 
         target_crop_coords = self.data_store.crop_target_coords[pair_name][()]
         self.target_crop_coords = [
-            cv2.KeyPoint(int(x), int(y), 1.)
+            cv2.KeyPoint(x, y, 1.)
             for x, y in target_crop_coords
         ]
 
@@ -346,3 +381,13 @@ class Matches:
         g = self.data_store.crop_target_coords
         if pair_name not in g:
             g.create_dataset(pair_name, data=target_crop_coords, compression='gzip', compression_opts=9)
+
+    def save_rotations(self):
+        assert self.rotations is not None
+        rotations = np.array(self.rotations)
+
+        pair_name = f"{self.a.image_name}_{self.b.image_name}"
+
+        g = self.data_store.rotations
+        if pair_name not in g:
+            g.create_dataset(pair_name, data=rotations, compression='gzip', compression_opts=9)

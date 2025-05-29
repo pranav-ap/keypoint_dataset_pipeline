@@ -10,7 +10,12 @@ def main():
     make_clear_directory(config.paths[config.task.name].train_data)
 
     creator = TrainingDatasetCreator()
-    creator.extract()
+    
+    if config.task.only_missing:
+        creator.extract_only_missing()
+    else:
+        creator.extract()
+    
     creator.close()
 
 
